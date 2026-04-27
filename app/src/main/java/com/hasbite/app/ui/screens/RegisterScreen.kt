@@ -10,6 +10,9 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.hasbite.app.ui.viewmodel.AuthViewModel
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,6 +41,9 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val viewModel: AuthViewModel = viewModel()
+    val registerState by viewModel.loginState.collectAsState()
 
     var showPassword by remember { mutableStateOf(false) }
     var showConfirmPassword by remember { mutableStateOf(false) }
@@ -165,7 +171,12 @@ fun RegisterScreen(
 
                 Button(
                     onClick = {
-                        onCreateAccountClick(username, email, password, confirmPassword)
+                        if (password != confirmPassword) {
+                            errorMessage = "Passwords do not match"
+                        } else {
+                            errorMessage = null
+                            viewModel.register(email, password)
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -176,6 +187,17 @@ fun RegisterScreen(
                     )
                 ) {
                     Text("Create Account", fontWeight = FontWeight.Bold)
+                }
+                errorMessage?.let {
+                    Text(text = it, color = Color.Red)
+                }
+                Spacer(Modifier.height(8.dp))
+
+                registerState?.let {
+                    Text(
+                        text = it,
+                        color = if (it == "REGISTER_SUCCESS") Color.Green else Color.Red
+                    )
                 }
 
                 Spacer(Modifier.height(12.dp))

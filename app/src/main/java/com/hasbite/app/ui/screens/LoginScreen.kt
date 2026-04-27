@@ -12,6 +12,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.hasbite.app.ui.viewmodel.AuthViewModel
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -33,6 +35,15 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
+    val viewModel: AuthViewModel = viewModel()
+    val loginState by viewModel.loginState.collectAsState()
+
+    LaunchedEffect(loginState) {
+        if (loginState == "SUCCESS") {
+            onLoginClick(email, password)
+        }
+    }
+
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -132,16 +143,27 @@ fun LoginScreen(
                 Spacer(Modifier.height(10.dp))
 
                 Button(
-                    onClick = { onLoginClick(email, password) },
+                    onClick = {
+                        viewModel.login(email, password)
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
                     shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFE96A1A) // orange button
+                        containerColor = Color(0xFFE96A1A)
                     )
                 ) {
                     Text("Log in", fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                loginState?.let {
+                    Text(
+                        text = it,
+                        color = Color.Red
+                    )
                 }
 
                 Spacer(Modifier.height(12.dp))
