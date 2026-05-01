@@ -171,12 +171,28 @@ fun RegisterScreen(
 
                 Button(
                     onClick = {
+
+                        val cleanEmail = email.trim()
+
+                        val emailRegex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+
+                        if (!emailRegex.matches(cleanEmail)) {
+                            errorMessage = "Invalid email format"
+                            return@Button
+                        }
+
+                        if (password.length < 6) {
+                            errorMessage = "Password must be at least 6 characters"
+                            return@Button
+                        }
+
                         if (password != confirmPassword) {
                             errorMessage = "Passwords do not match"
-                        } else {
-                            errorMessage = null
-                            viewModel.register(email, password)
+                            return@Button
                         }
+
+                        errorMessage = null
+                        viewModel.register(username, cleanEmail, password)
                     },
                     modifier = Modifier
                         .fillMaxWidth()

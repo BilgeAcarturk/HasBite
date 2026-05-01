@@ -17,6 +17,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.collectAsState
+import com.hasbite.app.ui.viewmodel.ProfileViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -40,10 +43,24 @@ fun EditProfileScreen(
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {}
 ) {
-    var name by remember { mutableStateOf("Jane Doe") }
-    var age by remember { mutableStateOf("29") }
-    var bio by remember { mutableStateOf("Food Enthusiast") }
-    var email by remember { mutableStateOf("jane.doe@email.com") }
+
+    val viewModel: ProfileViewModel = viewModel()
+    val user by viewModel.user.collectAsState()
+
+    var name by remember { mutableStateOf("") }
+    var age by remember { mutableStateOf("") }
+    var bio by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+
+    LaunchedEffect(user) {
+        user?.let {
+            name = it.name
+            age = it.age.toString()
+            email = it.email
+            bio = it.bio
+        }
+    }
+
 
     Box(
         modifier = modifier
@@ -159,7 +176,16 @@ fun EditProfileScreen(
                         Spacer(Modifier.height(22.dp))
 
                         Button(
-                            onClick = { },
+                            onClick = {
+                                viewModel.updateUser(
+                                    name = name,
+                                    age = age.toIntOrNull() ?: 0,
+                                    bio = bio,
+                                    email = email
+                                )
+
+                                onBackClick() // profile'a geri dön
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(54.dp),

@@ -39,6 +39,7 @@ class AIViewModel : ViewModel() {
             }
         }
     }
+
 }
 
 data class ParsedRecipe(

@@ -21,7 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.hasbite.app.ui.viewmodel.ProfileViewModel
 import androidx.compose.ui.graphics.Brush
+import com.hasbite.app.data.model.User
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -40,6 +43,7 @@ private val TextMuted = Color(0xFF8A8A8A)
 private fun TextStyle.noFontPad(): TextStyle =
     copy(platformStyle = PlatformTextStyle(includeFontPadding = false))
 
+
 @Composable
 fun ProfileScreen(
     modifier: Modifier = Modifier,
@@ -50,7 +54,14 @@ fun ProfileScreen(
     onOpenInviteFriends: () -> Unit = {}
 ) {
 
+    val viewModel: ProfileViewModel = viewModel()
+    val user by viewModel.user.collectAsState()
+
     var notificationsEnabled by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        viewModel.refreshUser()
+    }
 
     Box(
         modifier = modifier
@@ -78,6 +89,7 @@ fun ProfileScreen(
 
             item {
                 ProfileCard(
+                    user = user,
                     onEditProfile = onOpenEditProfile
                 )
             }
@@ -125,6 +137,7 @@ private fun ProfileHeader() {
 
 @Composable
 private fun ProfileCard(
+    user: User?,
     onEditProfile: () -> Unit
 ) {
 
@@ -170,14 +183,14 @@ private fun ProfileCard(
             Spacer(Modifier.height(14.dp))
 
             Text(
-                text = "Jane Doe",
+                text = user?.name ?: "Loading...",
                 style = MaterialTheme.typography.headlineMedium.noFontPad(),
                 fontWeight = FontWeight.Bold,
                 color = TextDark
             )
 
             Text(
-                text = "Food Enthusiast • 29",
+                text = "${user?.email ?: ""} • ${user?.age ?: ""}",
                 style = MaterialTheme.typography.bodyLarge.noFontPad(),
                 color = TextMuted
             )
