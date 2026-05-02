@@ -4,8 +4,13 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.DismissDirection
+import androidx.compose.material.DismissValue
+import androidx.compose.material.rememberDismissState
+import androidx.compose.material.SwipeToDismiss
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Add
@@ -22,7 +27,12 @@ import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hasbite.app.R
+import com.hasbite.app.ui.viewmodel.ShoppingViewModel
+
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.ExperimentalMaterialApi
 
 private val CreamBg = Color(0xFFF6EFE7)
 private val Orange = Color(0xFFE47A2E)
@@ -34,25 +44,23 @@ private fun TextStyle.noFontPad(): TextStyle =
     copy(platformStyle = PlatformTextStyle(includeFontPadding = false))
 
 data class ShoppingItem(
+    val id: String = "",
     val name: String,
-    var checked: Boolean = false
+    val checked: Boolean = false
 )
 
+@OptIn(ExperimentalMaterialApi::class)
+
 @Composable
+
 fun ShoppingListScreen(
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {}
 ) {
+    val viewModel: ShoppingViewModel = viewModel()
+    val items = viewModel.items
+
     var newItem by remember { mutableStateOf("") }
-    val shoppingItems = remember {
-        mutableStateListOf(
-            ShoppingItem("Eggs"),
-            ShoppingItem("Milk"),
-            ShoppingItem("Olive oil"),
-            ShoppingItem("Chicken breast"),
-            ShoppingItem("Tomatoes")
-        )
-    }
 
     Box(
         modifier = modifier
@@ -74,6 +82,7 @@ fun ShoppingListScreen(
             contentPadding = PaddingValues(top = 14.dp, bottom = 36.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
+
             item {
                 ScreenHeader(
                     title = "Shopping List",
@@ -82,6 +91,7 @@ fun ShoppingListScreen(
                 )
             }
 
+            // ADD ITEM
             item {
                 Card(
                     modifier = Modifier
@@ -122,7 +132,7 @@ fun ShoppingListScreen(
                             IconButton(
                                 onClick = {
                                     if (newItem.isNotBlank()) {
-                                        shoppingItems.add(ShoppingItem(newItem.trim()))
+                                        viewModel.addItem(newItem)
                                         newItem = ""
                                     }
                                 }
@@ -138,6 +148,7 @@ fun ShoppingListScreen(
                 }
             }
 
+            // HEADER CARD (liste başlığı)
             item {
                 Card(
                     modifier = Modifier
@@ -174,42 +185,91 @@ fun ShoppingListScreen(
                         }
 
                         Divider(color = Color(0xFFE8DED3))
+                    }
+                }
+            }
 
-                        shoppingItems.forEachIndexed { index, item ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 18.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Checkbox(
-                                    checked = item.checked,
-                                    onCheckedChange = { checked ->
-                                        shoppingItems[index] = item.copy(checked = checked)
-                                    },
-                                    colors = CheckboxDefaults.colors(
-                                        checkedColor = Orange,
-                                        uncheckedColor = TextMuted
-                                    )
-                                )
+            itemsIndexed(items) { index, item ->
+                val dismissState = rememberDismissState()
 
-                                Spacer(Modifier.width(10.dp))
+                if (dismissState.isDismissed(DismissDirection.EndToStart)) {
+                    LaunchedEffect(item.id) {
+                        viewModel.deleteItem(item)
+                    }
+                }
 
-                                Text(
-                                    text = item.name,
-                                    style = MaterialTheme.typography.bodyLarge.noFontPad(),
-                                    color = if (item.checked) TextMuted else TextDark
-                                )
-                            }
-
-                            if (index != shoppingItems.lastIndex) {
-                                Divider(
-                                    color = Color(0xFFE8DED3),
-                                    modifier = Modifier.padding(horizontal = 18.dp)
-                                )
-                            }
+                SwipeToDismiss(
+                    state = dismissState,
+                    directions = setOf(DismissDirection.EndToStart),
+                    modifier = Modifier.padding(vertical = 4.dp), // Baloncuklar arası boşluk
+                    background = {
+                        // Kaydırırken arkada çıkan kırmızı silme alanı (isteğe bağlı)
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 2.dp)
+                                .background(Color.Red.copy(alpha = 0.7f), RoundedCornerShape(20.dp)),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            Icon(
+                                androidx.compose.material.icons.Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.padding(end = 16.dp)
+                            )
                         }
                     }
+                ) {
+                    // Baloncuk Görünümlü Kart
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(4.dp, RoundedCornerShape(20.dp)),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color.White.copy(alpha = 0.9f) // Açık renkli baloncuk
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = item.checked,
+                                onCheckedChange = {
+                                    viewModel.toggleItem(item)
+                                },
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = Orange,
+                                    uncheckedColor = TextMuted
+                                )
+                            )
+
+                            Spacer(Modifier.width(8.dp))
+
+                            Text(
+                                text = item.name,
+                                style = MaterialTheme.typography.bodyLarge.noFontPad(),
+                                color = if (item.checked) TextMuted else TextDark,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // CLEAR BUTTON
+            item {
+                Button(
+                    onClick = { viewModel.clearCompleted() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Orange)
+                ) {
+                    Text("Clear Completed", color = Color.White)
                 }
             }
         }

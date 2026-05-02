@@ -31,6 +31,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.hasbite.app.R
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 private val Cream = Color(0xFFF6EFE7)
 private val CreamTop = Color(0xE6F6EFE7)
@@ -47,7 +49,8 @@ private fun TextStyle.noFontPad(): TextStyle =
 @Composable
 fun AIRecipeScreen(
     modifier: Modifier = Modifier,
-    onBackClick: () -> Unit = {}
+    onBackClick: () -> Unit = {},
+            query: String = ""
 ) {
     val viewModel: AIViewModel = viewModel()
     val result by viewModel.result.collectAsState()
@@ -57,6 +60,20 @@ fun AIRecipeScreen(
     val loading by viewModel.loading.collectAsState()
     val error by viewModel.error.collectAsState()
     var message by remember { mutableStateOf("") }
+
+    val db = FirebaseFirestore.getInstance()
+    val auth = FirebaseAuth.getInstance()
+    var selectedCategory by remember { mutableStateOf("Dinner") }
+    var expanded by remember { mutableStateOf(false) }
+
+    val categories = listOf("Breakfast", "Lunch", "Dinner", "Dessert", "Healthy")
+
+    LaunchedEffect(query) {
+        android.util.Log.d("HASBITE_AI", "LaunchedEffect çalıştı, Query: $query")
+        if (query.isNotBlank()) {
+            viewModel.generate(query)
+        }
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
 
@@ -249,8 +266,45 @@ fun AIRecipeScreen(
 
                                 Spacer(Modifier.height(18.dp))
 
+                                Box {
+                                    OutlinedButton(
+                                        onClick = { expanded = true },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Category: $selectedCategory")
+                                    }
+
+                                    DropdownMenu(
+                                        expanded = expanded,
+                                        onDismissRequest = { expanded = false }
+                                    ) {
+                                        categories.forEach { category ->
+                                            DropdownMenuItem(
+                                                text = { Text(category) },
+                                                onClick = {
+                                                    selectedCategory = category
+                                                    expanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+
                                 Button(
-                                    onClick = { /* firestore next */ },
+                                    onClick = {
+                                        val uid = auth.currentUser?.uid ?: return@Button
+
+                                        val recipeData = hashMapOf(
+                                            "title" to (parsed?.title ?: "AI Recipe"),
+                                            "content" to result,
+                                            "category" to selectedCategory
+                                        )
+
+                                        db.collection("users")
+                                            .document(uid)
+                                            .collection("saved_recipes")
+                                            .add(recipeData)
+                                    },
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(20.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = Orange)
