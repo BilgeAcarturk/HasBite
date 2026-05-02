@@ -31,6 +31,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hasbite.app.R
 import com.hasbite.app.ui.viewmodel.ShoppingViewModel
 
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.ExperimentalMaterialApi
 
 private val CreamBg = Color(0xFFF6EFE7)
@@ -189,11 +190,10 @@ fun ShoppingListScreen(
             }
 
             itemsIndexed(items) { index, item ->
-
                 val dismissState = rememberDismissState()
 
                 if (dismissState.isDismissed(DismissDirection.EndToStart)) {
-                    LaunchedEffect(Unit) {
+                    LaunchedEffect(item.id) {
                         viewModel.deleteItem(item)
                     }
                 }
@@ -201,40 +201,62 @@ fun ShoppingListScreen(
                 SwipeToDismiss(
                     state = dismissState,
                     directions = setOf(DismissDirection.EndToStart),
-                    background = {}
+                    modifier = Modifier.padding(vertical = 4.dp), // Baloncuklar arası boşluk
+                    background = {
+                        // Kaydırırken arkada çıkan kırmızı silme alanı (isteğe bağlı)
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 2.dp)
+                                .background(Color.Red.copy(alpha = 0.7f), RoundedCornerShape(20.dp)),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            Icon(
+                                androidx.compose.material.icons.Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.padding(end = 16.dp)
+                            )
+                        }
+                    }
                 ) {
-                    Row(
+                    // Baloncuk Görünümlü Kart
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 18.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .shadow(4.dp, RoundedCornerShape(20.dp)),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color.White.copy(alpha = 0.9f) // Açık renkli baloncuk
+                        )
                     ) {
-                        Checkbox(
-                            checked = item.checked,
-                            onCheckedChange = {
-                                viewModel.toggleItem(item)
-                            },
-                            colors = CheckboxDefaults.colors(
-                                checkedColor = Orange,
-                                uncheckedColor = TextMuted
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = item.checked,
+                                onCheckedChange = {
+                                    viewModel.toggleItem(item)
+                                },
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = Orange,
+                                    uncheckedColor = TextMuted
+                                )
                             )
-                        )
 
-                        Spacer(Modifier.width(10.dp))
+                            Spacer(Modifier.width(8.dp))
 
-                        Text(
-                            text = item.name,
-                            style = MaterialTheme.typography.bodyLarge.noFontPad(),
-                            color = if (item.checked) TextMuted else TextDark
-                        )
+                            Text(
+                                text = item.name,
+                                style = MaterialTheme.typography.bodyLarge.noFontPad(),
+                                color = if (item.checked) TextMuted else TextDark,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
-                }
-
-                if (index != items.lastIndex) {
-                    Divider(
-                        color = Color(0xFFE8DED3),
-                        modifier = Modifier.padding(horizontal = 18.dp)
-                    )
                 }
             }
 
