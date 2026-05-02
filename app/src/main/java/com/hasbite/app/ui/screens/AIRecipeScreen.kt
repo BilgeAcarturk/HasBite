@@ -47,7 +47,8 @@ private fun TextStyle.noFontPad(): TextStyle =
 @Composable
 fun AIRecipeScreen(
     modifier: Modifier = Modifier,
-    onBackClick: () -> Unit = {}
+    onBackClick: () -> Unit = {},
+    query: String = "" // Bunu eklemezsen uygulama parametreyi bulamaz ve kapanır!
 ) {
     val viewModel: AIViewModel = viewModel()
     val result by viewModel.result.collectAsState()
@@ -57,6 +58,13 @@ fun AIRecipeScreen(
     val loading by viewModel.loading.collectAsState()
     val error by viewModel.error.collectAsState()
     var message by remember { mutableStateOf("") }
+
+    LaunchedEffect(query) {
+        android.util.Log.d("HASBITE_AI", "LaunchedEffect çalıştı, Query: $query")
+        if (query.isNotBlank()) {
+            viewModel.generate(query)
+        }
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
 

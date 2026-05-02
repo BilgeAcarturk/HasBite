@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material3.*
@@ -32,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.hasbite.app.R
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material.icons.filled.Close
 
 private val CreamBg = Color(0xFFF6EFE7)
 private val Orange = Color(0xFFE47A2E)
@@ -63,8 +65,13 @@ fun ExploreScreen(
     onOpenRecipeDetail: (String) -> Unit = {}
 ) {
     val listState = rememberLazyListState()
-    var selectedFilter by remember { mutableStateOf(0) }
 
+    // --- 1. STATE TANIMLARI ---
+    var selectedFilter by remember { mutableStateOf(0) }
+    var isSearchActive by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    // --- 2. VERİ LİSTELERİ ---
     val filters = listOf(
         ExploreFilter("all", "All", "🍽️"),
         ExploreFilter("breakfast", "Breakfast", "🍳"),
@@ -88,19 +95,21 @@ fun ExploreScreen(
         CategoryTile("Asian", "Noodles, rice", R.drawable.recipe_asian, Color(0xFFD9D0FF))
     )
 
+    val selectedFilterKey = filters[selectedFilter].key
+
+    // --- 3. FİLTRELEME MANTIĞI (Tek Bir Yerde) ---
+    val filteredPopular = popular.filter { item ->
+        val matchesFilter = selectedFilterKey == "all" || item.categoryKey == selectedFilterKey
+        val matchesSearch = item.title.contains(searchQuery, ignoreCase = true)
+        matchesFilter && matchesSearch
+    }
+
     val recommended = RecommendedItem(
         title = "Protein Pancakes",
         meta = "Healthy • 15 min",
         rating = 4.7,
         imageRes = R.drawable.recipe_pancake
     )
-    val selectedFilterKey = filters[selectedFilter].key
-
-    val filteredPopular = if (selectedFilterKey == "all") {
-        popular
-    } else {
-        popular.filter { it.categoryKey == selectedFilterKey }
-    }
 
     Box(
         modifier = modifier
@@ -125,44 +134,82 @@ fun ExploreScreen(
             contentPadding = PaddingValues(top = 14.dp, bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            item { ExploreHeader(title = "Explore", subtitle = "Discover delicious recipes") }
-
             item {
-                FilterRow(
-                    filters = filters,
-                    selectedIndex = selectedFilter,
-                    onSelect = { selectedFilter = it }
+                ExploreHeader(
+                    title = "Explore",
+                    subtitle = "Discover delicious recipes",
+                    searchQuery = searchQuery,
+                    isSearchActive = isSearchActive,
+                    onSearchToggle = {
+                        isSearchActive = !isSearchActive
+                        if (!isSearchActive) searchQuery = "" // Arama kapanınca filtreyi sıfırla
+                    },
+                    onSearchQueryChange = { searchQuery = it }
                 )
             }
 
-            item {
-                TodaySpecialBanner(
-                    title = "Creamy Sun-Dried\nTomato Pasta",
-                    meta = "25 min • Medium",
-                    onViewRecipe = { onOpenRecipeDetail("pasta") }
-                )
+            // Arama sonucu boşsa kullanıcıya bilgi verelim
+            if (filteredPopular.isEmpty()) {
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 40.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "No results found for '$searchQuery'",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = TextMuted
+                        )
+                        Spacer(Modifier.height(16.dp))
+
+                        // AI ile Üretme Butonu
+                        Button(
+                            onClick = {
+                                if (searchQuery.isNotBlank()) {
+                                    // Boşlukları güvenli hale getiriyoruz
+                                    val encodedQuery = java.net.URLEncoder.encode(searchQuery, "UTF-8")
+
+                                    // 🔥 KRİTİK DÜZELTME: Doğrudan rotayı veriyoruz!
+                                    // Başına hiçbir şey eklemeden sadece rotayı gönderin.
+                                    onOpenRecipeDetail("ai_generate/$encodedQuery")
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Orange),
+                            shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null) // Parıltı ikonu
+                            Spacer(Modifier.width(8.dp))
+                            Text("Generate with AI")
+                        }
+                    }
+                }
+            } else {
+                item {
+                    TodaySpecialBanner(
+                        title = "Creamy Sun-Dried\nTomato Pasta",
+                        meta = "25 min • Medium",
+                        onViewRecipe = { onOpenRecipeDetail("pasta") }
+                    )
+                }
+
+                item {
+                    SectionTitle(title = "Popular Recipes", action = "See All", onAction = { /* later */ })
+                }
+
+                item {
+                    PopularRow(
+                        popular = filteredPopular,
+                        onOpenRecipeDetail = onOpenRecipeDetail
+                    )
+                }
             }
 
+            // Kategoriler ve diğerleri her zaman görünebilir
             item {
-                SectionTitle(title = "Popular Recipes", action = "See All", onAction = { /* later */ })
+                Text(text = "Categories", style = MaterialTheme.typography.titleLarge.noFontPad(), fontWeight = FontWeight.Bold, color = TextDark)
             }
-
-            item {
-                PopularRow(
-                    popular = filteredPopular,
-                    onOpenRecipeDetail = onOpenRecipeDetail
-                )
-            }
-
-            item {
-                Text(
-                    text = "Categories",
-                    style = MaterialTheme.typography.titleLarge.noFontPad(),
-                    fontWeight = FontWeight.Bold,
-                    color = TextDark
-                )
-            }
-
             item { CategoriesGrid(categories = categories) }
 
             item {
@@ -185,29 +232,53 @@ fun ExploreScreen(
 }
 
 @Composable
-private fun ExploreHeader(title: String, subtitle: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.displaySmall.noFontPad(),
-                fontWeight = FontWeight.ExtraBold,
-                color = TextDark
-            )
+private fun ExploreHeader(
+    title: String,
+    subtitle: String,
+    searchQuery: String,
+    isSearchActive: Boolean,
+    onSearchToggle: () -> Unit,
+    onSearchQueryChange: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (!isSearchActive) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = title, style = MaterialTheme.typography.displaySmall.noFontPad(), fontWeight = FontWeight.ExtraBold, color = TextDark)
+                    Text(text = subtitle, style = MaterialTheme.typography.bodyLarge.noFontPad(), color = TextMuted)
+                }
+            } else {
+                // Arama Çubuğu
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = onSearchQueryChange,
+                    modifier = Modifier.weight(1f).padding(end = 8.dp),
+                    placeholder = { Text("Search recipes...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = {
+                        IconButton(onClick = { onSearchQueryChange(""); onSearchToggle() }) {
+                            Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
+                        }
+                    },
+                    shape = RoundedCornerShape(24.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White.copy(alpha = 0.9f),
+                        unfocusedContainerColor = Color.White.copy(alpha = 0.7f),
+                        focusedBorderColor = Orange
+                    ),
+                    singleLine = true
+                )
+            }
 
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyLarge.noFontPad(),
-                color = TextMuted
-            )
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            CircleIconButton(icon = Icons.Outlined.NotificationsNone, onClick = { /* later */ })
-            CircleIconButton(icon = Icons.Filled.Search, onClick = { /* later */ })
+            if (!isSearchActive) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    CircleIconButton(icon = Icons.Outlined.NotificationsNone, onClick = { /* Later */ })
+                    CircleIconButton(icon = Icons.Filled.Search, onClick = onSearchToggle)
+                }
+            }
         }
     }
 }
