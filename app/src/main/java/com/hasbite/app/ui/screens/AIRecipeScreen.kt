@@ -297,13 +297,20 @@ fun AIRecipeScreen(
                                         val recipeData = hashMapOf(
                                             "title" to (parsed?.title ?: "AI Recipe"),
                                             "content" to result,
-                                            "category" to selectedCategory
+                                            "category" to selectedCategory,
+                                            "ingredients" to (parsed?.ingredients ?: emptyList<String>()),
+                                            "steps" to (parsed?.steps ?: emptyList<String>()),
+                                            "imageUrl" to "https://images.unsplash.com/photo-1546069901-ba9599a7e63c" // Geçici bir görsel
                                         )
 
+                                        //Bilgenin kısmı
                                         db.collection("users")
                                             .document(uid)
                                             .collection("saved_recipes")
                                             .add(recipeData)
+
+                                        // 2. Senin isteği: Genel tarif havuzu (Böylece Explore'da herkes görür)
+                                        db.collection("recipes").add(recipeData)
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(20.dp),
