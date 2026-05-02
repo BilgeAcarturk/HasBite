@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "443572300666",
+    "project_id": "hasbite-9ebbe",
+    "storage_bucket": "hasbite-9ebbe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:443572300666:android:0d6ccae91fd0117b8484c3",
+        "android_client_info": {
+          "package_name": "com.hasbite.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDIef9EKI_vHYvrZqSXPdf0sUzG84AEfJY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
