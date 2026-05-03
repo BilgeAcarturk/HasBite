@@ -6,6 +6,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.hasbite.app.ui.screens.*
+import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.material.icons.outlined.Logout
 
 @Composable
 fun AppNavGraph(
@@ -92,7 +94,17 @@ fun AppNavGraph(
                     onOpenAccountSettings = { navController.navigate(Routes.AccountSettings.route) },
                     onOpenCollections = { navController.navigate(Routes.MyCollections.route) },
                     onOpenShoppingList = { navController.navigate(Routes.ShoppingList.route) },
-                    onOpenInviteFriends = { navController.navigate(Routes.InviteFriends.route) }
+                    onOpenInviteFriends = { navController.navigate(Routes.InviteFriends.route) },
+                    onLogout = {
+                        // 1. Firebase oturumunu kapat
+                        FirebaseAuth.getInstance().signOut()
+
+                        // 2. DOĞRU ROTA: login_screen_route yerine Routes.Login.route kullanmalısın
+                        navController.navigate(Routes.Login.route) {
+                            // Uygulama geçmişini tamamen temizler, böylece geri tuşuyla profile dönülmez
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
                 )
             }
         }
@@ -150,6 +162,8 @@ fun AppNavGraph(
         composable(Routes.ShoppingList.route) {
             ShoppingListScreen(onBackClick = { navController.popBackStack() })
         }
+
+
 
         composable(Routes.InviteFriends.route) {
             InviteFriendsScreen(onBackClick = { navController.popBackStack() })
