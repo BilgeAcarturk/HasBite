@@ -95,10 +95,6 @@ fun AppNavGraph(
 
         composable(Routes.ForgotPassword.route) {
             ForgotPasswordScreen(
-                onResetClick = { email ->
-                    // Şimdilik backend yok, reset'e basınca tekrar login ekranına dön
-                    navController.popBackStack()
-                },
                 onBackToLoginClick = {
                     navController.popBackStack()
                 }
@@ -181,12 +177,6 @@ fun AppNavGraph(
             AccountSettingsScreen(
                 onBackClick = {
                     navController.popBackStack()
-                },
-                onOpenPersonalInformation = {
-                    navController.navigate(Routes.PersonalInformation.route)
-                },
-                onOpenEmailAddress = {
-                    navController.navigate(Routes.EmailAddress.route)
                 },
                 onOpenChangePassword = {
                     navController.navigate(Routes.ChangePassword.route)
