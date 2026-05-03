@@ -43,14 +43,13 @@ fun EditProfileScreen(
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {}
 ) {
-
     val viewModel: ProfileViewModel = viewModel()
     val user by viewModel.user.collectAsState()
 
     var name by remember { mutableStateOf("") }
     var age by remember { mutableStateOf("") }
     var bio by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") } // Sadece göstermek için tutmaya devam ediyoruz
 
     LaunchedEffect(user) {
         user?.let {
@@ -170,7 +169,8 @@ fun EditProfileScreen(
                         EditField(
                             label = "Email",
                             value = email,
-                            onValueChange = { email = it }
+                            onValueChange = { }, // Değişikliğe izin verme
+                            readOnly = true      // Yeni eklediğimiz parametre
                         )
 
                         Spacer(Modifier.height(22.dp))
@@ -180,11 +180,9 @@ fun EditProfileScreen(
                                 viewModel.updateUser(
                                     name = name,
                                     age = age.toIntOrNull() ?: 0,
-                                    bio = bio,
-                                    email = email
+                                    bio = bio
                                 )
-
-                                onBackClick() // profile'a geri dön
+                                onBackClick()
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -244,7 +242,8 @@ private fun EditProfileHeader(onBackClick: () -> Unit) {
 private fun EditField(
     label: String,
     value: String,
-    onValueChange: (String) -> Unit
+    onValueChange: (String) -> Unit,
+    readOnly: Boolean = false // Varsayılan olarak false
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -262,11 +261,15 @@ private fun EditField(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
             singleLine = true,
+            readOnly = readOnly, // TextField'ı kilitler
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = Color.White.copy(alpha = 0.65f),
                 unfocusedContainerColor = Color.White.copy(alpha = 0.65f),
-                focusedBorderColor = Orange,
-                unfocusedBorderColor = Color(0xFFE7DED4)
+                focusedBorderColor = if (readOnly) Color.Transparent else Orange,
+                unfocusedBorderColor = Color(0xFFE7DED4),
+                // Yazı rengini eğer sadece okunabilirse biraz gri yapıyoruz
+                focusedTextColor = if (readOnly) TextMuted else TextDark,
+                unfocusedTextColor = if (readOnly) TextMuted else TextDark
             )
         )
     }
