@@ -25,6 +25,10 @@ import com.hasbite.app.ui.screens.FavoritesScreen
 import com.hasbite.app.ui.screens.ProfileScreen
 import com.hasbite.app.ui.screens.AIRecipeScreen
 import com.hasbite.app.ui.screens.RecipeDetailScreen
+
+import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.material.icons.outlined.Logout
+
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
@@ -35,6 +39,24 @@ fun AppNavGraph(
         startDestination = Routes.Splash.route,
         modifier = modifier
     ) {
+
+
+        // 1. ADIM: AppNavGraph içindeki "ai_generate" ve "Routes.AIRecipe" kısımlarını sil.
+        // 2. ADIM: Yerine tam olarak bunu yapıştır:
+
+        // AppNavGraph.kt içindeki ilgili blok:
+        composable(
+            route = "ai_generate/{query}"
+        ) { backStackEntry ->
+            // Navigasyondan gelenencoded metni çözüyoruz (decode)
+            val rawQuery = backStackEntry.arguments?.getString("query") ?: ""
+            val decodedQuery = java.net.URLDecoder.decode(rawQuery, "UTF-8")
+
+            AIRecipeScreen(
+                onBackClick = { navController.popBackStack() },
+                query = decodedQuery // Temizlenmiş metni gönderiyoruz
+            )
+        }
 
         composable(Routes.Splash.route) {
             SplashScreen(
@@ -105,8 +127,14 @@ fun AppNavGraph(
             MainScaffold(navController) { m ->
                 ExploreScreen(
                     modifier = m,
-                    onOpenRecipeDetail = { recipeId ->
-                        navController.navigate(Routes.RecipeDetail.createRoute(recipeId))
+                    onOpenRecipeDetail = { route ->
+                        // 🔥 EĞER route "ai_generate" ile başlıyorsa direkt o route'a git,
+                        // değilse eski usül recipe_detail oluştur.
+                        if (route.startsWith("ai_generate")) {
+                            navController.navigate(route)
+                        } else {
+                            navController.navigate("recipe_detail/$route")
+                        }
                     }
                 )
             }
@@ -141,6 +169,16 @@ fun AppNavGraph(
                     },
                     onOpenInviteFriends = {
                         navController.navigate(Routes.InviteFriends.route)
+                    },
+                    onLogout = {
+                        // 1. Firebase oturumunu kapat
+                        FirebaseAuth.getInstance().signOut()
+
+                        // 2. DOĞRU ROTA: login_screen_route yerine Routes.Login.route kullanmalısın
+                        navController.navigate(Routes.Login.route) {
+                            // Uygulama geçmişini tamamen temizler, böylece geri tuşuyla profile dönülmez
+                            popUpTo(0) { inclusive = true }
+                        }
                     }
                 )
             }
@@ -236,5 +274,18 @@ fun AppNavGraph(
                 }
             )
         }
+
+        composable(
+            route = "ai_generate/{query}" // Başında slash (/) olmasın!
+        ) { backStackEntry ->
+            val query = backStackEntry.arguments?.getString("query") ?: ""
+            val decodedQuery = java.net.URLDecoder.decode(query, "UTF-8")
+
+            AIRecipeScreen(
+                onBackClick = { navController.popBackStack() },
+                query = decodedQuery
+            )
+        }
+
     }
 }
