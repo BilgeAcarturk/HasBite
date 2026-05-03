@@ -18,14 +18,21 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hasbite.app.R
+import com.hasbite.app.ui.viewmodel.AuthViewModel
 
 @Composable
 fun ForgotPasswordScreen(
-    onResetClick: (email: String) -> Unit = {},
-    onBackToLoginClick: () -> Unit = {}
+    onBackToLoginClick: () -> Unit
 ) {
+
+    val viewModel: AuthViewModel = viewModel()
+
     var email by remember { mutableStateOf("") }
+
+    val loading by viewModel.loading.collectAsState()
+    val message by viewModel.message.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -63,6 +70,7 @@ fun ForgotPasswordScreen(
                 modifier = Modifier.padding(horizontal = 22.dp, vertical = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+
                 Text(
                     text = "Forgot Password",
                     style = MaterialTheme.typography.headlineMedium,
@@ -93,7 +101,10 @@ fun ForgotPasswordScreen(
                 Spacer(Modifier.height(18.dp))
 
                 Button(
-                    onClick = { onResetClick(email) },
+                    onClick = {
+                        viewModel.sendReset(email)
+                    },
+                    enabled = !loading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
@@ -102,7 +113,15 @@ fun ForgotPasswordScreen(
                         containerColor = Color(0xFFE96A1A)
                     )
                 ) {
-                    Text("Send Reset Link", fontWeight = FontWeight.Bold)
+                    if (loading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    } else {
+                        Text("Send Reset Link", fontWeight = FontWeight.Bold)
+                    }
                 }
 
                 Spacer(Modifier.height(12.dp))
@@ -112,6 +131,21 @@ fun ForgotPasswordScreen(
                 }
 
                 Spacer(Modifier.height(6.dp))
+
+                // 🔥 MESSAGE
+                message?.let {
+                    Spacer(Modifier.height(8.dp))
+
+                    Text(
+                        text = it,
+                        color = if (it.contains("gönderildi")) Color(0xFF2E7D32) else Color.Red
+                    )
+
+                    LaunchedEffect(it) {
+                        kotlinx.coroutines.delay(3000)
+                        viewModel.clearMessage()
+                    }
+                }
             }
         }
     }
