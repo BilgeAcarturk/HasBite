@@ -7,7 +7,9 @@ sealed class Routes(val route: String) {
     data object Register : Routes("register")
 
     data object ForgotPassword : Routes("forgot_password")
-    data object Home : Routes("home")
+
+    // 🔥 Home yerine artık ana sayfamız AI
+    data object AI : Routes("ai_screen")
     data object Explore : Routes("explore")
     data object Favorites : Routes("favorites")
     data object Profile : Routes("profile")

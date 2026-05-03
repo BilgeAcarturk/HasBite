@@ -49,8 +49,8 @@ private fun TextStyle.noFontPad(): TextStyle =
 @Composable
 fun AIRecipeScreen(
     modifier: Modifier = Modifier,
-    onBackClick: () -> Unit = {},
-            query: String = ""
+    onBackClick: (() -> Unit)? = null, //Geri butonu opsiyonel
+    query: String = ""
 ) {
     val viewModel: AIViewModel = viewModel()
     val result by viewModel.result.collectAsState()
@@ -61,6 +61,9 @@ fun AIRecipeScreen(
     val error by viewModel.error.collectAsState()
     var message by remember { mutableStateOf("") }
 
+    // --- BURAYA DİKKAT: Yükleme durumu için yeni state ---
+    var isSaving by remember { mutableStateOf(false) }
+
     val db = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
     var selectedCategory by remember { mutableStateOf("Dinner") }
@@ -69,9 +72,14 @@ fun AIRecipeScreen(
     val categories = listOf("Breakfast", "Lunch", "Dinner", "Dessert", "Healthy")
 
     LaunchedEffect(query) {
-        android.util.Log.d("HASBITE_AI", "LaunchedEffect çalıştı, Query: $query")
         if (query.isNotBlank()) {
+            // 🔥 1. Kullanıcının arattığı kelimeyi mesaj kutusuna (baloncuğa) yazıyoruz
+            message = query
+
+            // 2. AI işlemini başlatıyoruz
             viewModel.generate(query)
+
+            android.util.Log.d("HASBITE_AI", "Explore'dan gelen sorgu işleniyor: $query")
         }
     }
 
@@ -108,44 +116,35 @@ fun AIRecipeScreen(
             // HEADER
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically // Ortalandı
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
+                // 🔥 Sadece onBackClick varsa geri butonunu göster
+                if (onBackClick != null) {
+                    Surface(
+                        modifier = Modifier.size(42.dp),
+                        shape = CircleShape,
+                        color = Color.White.copy(alpha = 0.78f),
+                        shadowElevation = 8.dp
                     ) {
-                        Surface(
-                            modifier = Modifier.size(42.dp),
-                            shape = CircleShape,
-                            color = Color.White.copy(alpha = 0.78f),
-                            shadowElevation = 8.dp
-                        ) {
-                            IconButton(onClick = onBackClick) {
-                                Icon(
-                                    Icons.Default.ArrowBack,
-                                    contentDescription = "Back",
-                                    tint = TextDark
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.width(10.dp))
-
-                        Column {
-                            Text(
-                                text = "AI Recipe",
-                                style = MaterialTheme.typography.headlineLarge.noFontPad(),
-                                fontWeight = FontWeight.Bold,
-                                color = TextDark
-                            )
-                            Text(
-                                text = "Assistant",
-                                style = MaterialTheme.typography.headlineMedium.noFontPad(),
-                                color = TextMuted
-                            )
+                        IconButton(onClick = onBackClick) {
+                            Icon(Icons.Default.ArrowBack, "Back", tint = TextDark)
                         }
                     }
+                    Spacer(Modifier.width(12.dp))
+                }
+
+                Column {
+                    Text(
+                        text = "AI Recipe",
+                        style = MaterialTheme.typography.headlineLarge.noFontPad(),
+                        fontWeight = FontWeight.Bold,
+                        color = TextDark
+                    )
+                    Text(
+                        text = "Assistant",
+                        style = MaterialTheme.typography.headlineMedium.noFontPad(),
+                        color = TextMuted
+                    )
                 }
             }
 
@@ -293,30 +292,41 @@ fun AIRecipeScreen(
                                 Button(
                                     onClick = {
                                         val uid = auth.currentUser?.uid ?: return@Button
+                                        isSaving = true // Yükleme animasyonunu başlat
+
+                                        val rawTitle = parsed.title
+                                        val encodedTitle = java.net.URLEncoder.encode(rawTitle, "UTF-8")
+                                        val finalImageUrl = "https://source.unsplash.com/featured/?$encodedTitle"
 
                                         val recipeData = hashMapOf(
-                                            "title" to (parsed?.title ?: "AI Recipe"),
+                                            "title" to rawTitle,
                                             "content" to result,
                                             "category" to selectedCategory,
-                                            "ingredients" to (parsed?.ingredients ?: emptyList<String>()),
-                                            "steps" to (parsed?.steps ?: emptyList<String>()),
-                                            "imageUrl" to "https://images.unsplash.com/photo-1546069901-ba9599a7e63c" // Geçici bir görsel
+                                            "ingredients" to recipe.ingredients,
+                                            "steps" to recipe.steps,
+                                            "imageUrl" to finalImageUrl,
+                                            "minutes" to (15..45).random(), // 0 min hatası için
+                                            "rating" to 4.5,
+                                            "saveCount" to 0
                                         )
 
-                                        //Bilgenin kısmı
-                                        db.collection("users")
-                                            .document(uid)
-                                            .collection("saved_recipes")
-                                            .add(recipeData)
-
-                                        // 2. Senin isteği: Genel tarif havuzu (Böylece Explore'da herkes görür)
-                                        db.collection("recipes").add(recipeData)
+                                        db.collection("recipes").add(recipeData).addOnCompleteListener { task ->
+                                            if (task.isSuccessful) {
+                                                db.collection("users").document(uid).collection("saved_recipes").add(recipeData)
+                                            }
+                                            isSaving = false // İşlem bittiğinde kapat
+                                        }
                                     },
                                     modifier = Modifier.fillMaxWidth(),
+                                    enabled = !isSaving, // Kaydederken butonu kilitle
                                     shape = RoundedCornerShape(20.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = Orange)
                                 ) {
-                                    Text("Save Recipe", fontWeight = FontWeight.Bold)
+                                    if (isSaving) {
+                                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                                    } else {
+                                        Text("Save Recipe", fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             }
                         }

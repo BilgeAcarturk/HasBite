@@ -49,37 +49,41 @@ data class ParsedRecipe(
 )
 
 fun parseRecipe(text: String): ParsedRecipe {
-    val lines = text.lines()
+    val lines = text.lines().map { it.trim() }.filter { it.isNotBlank() }
 
     var title = "AI Recipe"
     val ingredients = mutableListOf<String>()
     val steps = mutableListOf<String>()
-
     var mode = ""
 
     for (line in lines) {
-        val l = line.trim()
+        if (title == "AI Recipe") {
+            val lowerLine = line.lowercase()
+            // Eğer satır "##" ile başlıyorsa veya "here's" içermeyen kısa bir isimse başlık yap
+            if (line.startsWith("##")) {
+                title = line.replace("#", "").trim()
+            } else if (line.length < 50 && !lowerLine.contains("here's")) {
+                title = line
+            }
+        }
 
-        if (l.lowercase().contains("ingredients")) {
+        // 2. MOD BELİRLEME
+        if (line.lowercase().contains("ingredients")) {
             mode = "ING"
             continue
         }
-
-        if (l.lowercase().contains("steps") || l.lowercase().contains("instructions")) {
+        if (line.lowercase().contains("instructions") || line.lowercase().contains("steps")) {
             mode = "STEP"
             continue
         }
 
-        if (mode == "ING" && (l.startsWith("-") || l.startsWith("•"))) {
-            ingredients.add(l.removePrefix("-").removePrefix("•").trim())
+        // 3. VERİLERİ TOPLAMA
+        if (mode == "ING" && (line.startsWith("*") || line.startsWith("-") || line.startsWith("•"))) {
+            ingredients.add(line.removePrefix("*").removePrefix("-").removePrefix("•").trim())
         }
 
-        if (mode == "STEP" && (l.firstOrNull()?.isDigit() == true)) {
-            steps.add(l)
-        }
-
-        if (title == "AI Recipe" && l.isNotBlank()) {
-            title = l
+        if (mode == "STEP" && (line.firstOrNull()?.isDigit() == true)) {
+            steps.add(line)
         }
     }
 
