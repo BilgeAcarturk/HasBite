@@ -31,4 +31,8 @@ sealed class Routes(val route: String) {
     data object RecipeDetail : Routes("recipe_detail/{recipeId}") {
         fun createRoute(recipeId: String) = "recipe_detail/$recipeId"
     }
+
+    data object CollectionDetail : Routes("collection_detail/{category}") {
+        fun createRoute(category: String) = "collection_detail/$category"
+    }
 }

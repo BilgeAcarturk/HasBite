@@ -15,6 +15,7 @@ import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.RestaurantMenu
 import androidx.compose.material3.*
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hasbite.app.ui.viewmodel.SavedRecipesViewModel
@@ -50,7 +51,8 @@ private data class CollectionItem(
 @Composable
 fun MyCollectionsScreen(
     modifier: Modifier = Modifier,
-    onBackClick: () -> Unit = {}
+    onBackClick: () -> Unit = {},
+    onOpenCollection: (String) -> Unit
 ) {
 
     val viewModel: SavedRecipesViewModel = viewModel()
@@ -63,10 +65,10 @@ fun MyCollectionsScreen(
     val breakfastCount = recipes.count { it.category == "Breakfast" }
 
     val collections = listOf(
-        CollectionItem("Healthy Meals", "$healthyCount recipes", R.drawable.recipe_omelet, "healthy"),
-        CollectionItem("Dessert Picks", "$dessertCount recipes", R.drawable.recipe_chocolate_cake, "dessert"),
-        CollectionItem("Quick Dinners", "$dinnerCount recipes", R.drawable.recipe_chicken, "dinner"),
-        CollectionItem("Breakfast Ideas", "$breakfastCount recipes", R.drawable.recipe_pancake, "breakfast")
+        CollectionItem("Healthy Meals", "$healthyCount recipes", R.drawable.recipe_omelet, "Healthy"),
+        CollectionItem("Dessert Picks", "$dessertCount recipes", R.drawable.recipe_chocolate_cake, "Dessert"),
+        CollectionItem("Quick Dinners", "$dinnerCount recipes", R.drawable.recipe_chicken, "Dinner"),
+        CollectionItem("Breakfast Ideas", "$breakfastCount recipes", R.drawable.recipe_pancake, "Breakfast")
     )
 
     Box(
@@ -133,7 +135,12 @@ fun MyCollectionsScreen(
                             userScrollEnabled = false
                         ) {
                             items(collections) { item ->
-                                CollectionCard(item = item)
+                                CollectionCard(
+                                    item = item,
+                                    onClick = {
+                                        onOpenCollection(item.iconType) // 🔥 category gönderiyoruz
+                                    }
+                                )
                             }
                         }
                     }
@@ -183,12 +190,13 @@ private fun CollectionsHeader(onBackClick: () -> Unit) {
 }
 
 @Composable
-private fun CollectionCard(item: CollectionItem) {
+private fun CollectionCard(item: CollectionItem, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .height(190.dp)
-            .shadow(8.dp, RoundedCornerShape(22.dp)),
+            .shadow(8.dp, RoundedCornerShape(22.dp))
+            .clickable { onClick() },
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.82f))
     ) {

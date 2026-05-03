@@ -310,11 +310,20 @@ fun AIRecipeScreen(
                                             "saveCount" to 0
                                         )
 
-                                        db.collection("recipes").add(recipeData).addOnCompleteListener { task ->
-                                            if (task.isSuccessful) {
-                                                db.collection("users").document(uid).collection("saved_recipes").add(recipeData)
-                                            }
-                                            isSaving = false // İşlem bittiğinde kapat
+                                        val docRef = db.collection("recipes").document() // 🔥 ID'yi biz oluşturuyoruz
+
+                                        docRef.set(recipeData).addOnSuccessListener {
+
+                                            val recipeId = docRef.id // 🔥 AYNI ID
+
+                                            db.collection("users")
+                                                .document(uid)
+                                                .collection("saved_recipes")
+                                                .document(recipeId) // 🔥 AYNI ID KULLAN
+                                                .set(recipeData)
+
+                                        }.addOnCompleteListener {
+                                            isSaving = false
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth(),

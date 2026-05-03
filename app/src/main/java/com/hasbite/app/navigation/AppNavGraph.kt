@@ -109,6 +109,19 @@ fun AppNavGraph(
             }
         }
 
+        composable(Routes.CollectionDetail.route) { backStackEntry ->
+
+            val category = backStackEntry.arguments?.getString("category") ?: ""
+
+            CollectionDetailScreen(
+                category = category,
+                onBackClick = { navController.popBackStack() },
+                onOpenRecipe = { recipeId ->
+                    navController.navigate(Routes.RecipeDetail.createRoute(recipeId))
+                }
+            )
+        }
+
         // --- 3. SPECIAL AI & DETAILS ---
 
         // Explore'dan tetiklenen sorgulu AI ekranı
@@ -156,7 +169,14 @@ fun AppNavGraph(
         }
 
         composable(Routes.MyCollections.route) {
-            MyCollectionsScreen(onBackClick = { navController.popBackStack() })
+            MyCollectionsScreen(
+                onBackClick = { navController.popBackStack() },
+                onOpenCollection = { category ->
+                    navController.navigate(
+                        Routes.CollectionDetail.createRoute(category)
+                    )
+                }
+            )
         }
 
         composable(Routes.ShoppingList.route) {
