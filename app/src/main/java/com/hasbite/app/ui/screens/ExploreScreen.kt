@@ -55,11 +55,10 @@ fun ExploreScreen(
     modifier: Modifier = Modifier,
     onOpenRecipeDetail: (String) -> Unit = {}
 ) {
-    val listState = rememberLazyListState()
-
     // --- 1. VIEWMODEL BAĞLANTISI ---
     val exploreViewModel: ExploreViewModel = viewModel()
     val recipesFromFirebase by exploreViewModel.recipes.collectAsState()
+    val isLoading by exploreViewModel.isLoading.collectAsState()
 
     // --- 2. STATE TANIMLARI ---
     var selectedFilter by remember { mutableStateOf(0) }
@@ -77,23 +76,15 @@ fun ExploreScreen(
 
     val selectedFilterKey = filters[selectedFilter].key
 
-    // --- 3. FİLTRELEME MANTIĞI (Doğru Bağlantı) ---
+    // --- 3. FİLTRELEME MANTIĞI ---
     val filteredRecipes = recipesFromFirebase.filter { item ->
         val matchesFilter = selectedFilterKey == "all" || item.category.lowercase() == selectedFilterKey.lowercase()
         val matchesSearch = item.title.contains(searchQuery, ignoreCase = true)
         matchesFilter && matchesSearch
     }
 
-    val categories = listOf(
-        CategoryTile("Quick & Easy", "< 20 min", R.drawable.recipe_pancake, Color(0xFFFFD7B8)),
-        CategoryTile("Healthy", "Light meals", R.drawable.recipe_omelet, Color(0xFFCFE8D6)),
-        CategoryTile("Italian", "Pasta & more", R.drawable.recipe_pasta, Color(0xFFFFD1D1)),
-        CategoryTile("Asian", "Noodles, rice", R.drawable.recipe_asian, Color(0xFFD9D0FF))
-    )
-
-    val recommended = RecommendedItem("Protein Pancakes", "Healthy • 15 min", 4.7, R.drawable.recipe_pancake)
-
     Box(modifier = modifier.fillMaxSize().background(CreamBg)) {
+        // Arka Plan Resmi
         Image(
             painter = painterResource(R.drawable.login_food_bg),
             contentDescription = null,
@@ -102,50 +93,76 @@ fun ExploreScreen(
             alpha = 0.16f
         )
 
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 14.dp, bottom = 120.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            item {
-                ExploreHeader(
-                    title = "Explore",
-                    subtitle = "Discover delicious recipes",
-                    searchQuery = searchQuery,
-                    isSearchActive = isSearchActive,
-                    onSearchToggle = {
-                        isSearchActive = !isSearchActive
-                        if (!isSearchActive) searchQuery = ""
-                    },
-                    onSearchQueryChange = { searchQuery = it }
-                )
-            }
-
-            item {
-                FilterRow(filters = filters, selectedIndex = selectedFilter, onSelect = { selectedFilter = it })
-            }
-
-            if (filteredRecipes.isEmpty() && searchQuery.isNotBlank()) {
-                item { AICallToActionButton(searchQuery, onOpenRecipeDetail) }
-            } else {
+        if (isLoading) {
+            // 🔥 Veri yüklenirken merkezi bir Loading gösteriyoruz
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.Center),
+                color = Orange
+            )
+        } else {
+            // 🔥 Tek bir LazyColumn: Her şey burada dönecek
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(top = 14.dp, bottom = 120.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
                 item {
-                    TodaySpecialBanner(
-                        title = "Creamy Sun-Dried\nTomato Pasta",
-                        meta = "25 min • Medium",
-                        onViewRecipe = { onOpenRecipeDetail("pasta") }
+                    ExploreHeader(
+                        title = "Explore",
+                        subtitle = "Discover delicious recipes",
+                        searchQuery = searchQuery,
+                        isSearchActive = isSearchActive,
+                        onSearchToggle = {
+                            isSearchActive = !isSearchActive
+                            if (!isSearchActive) searchQuery = ""
+                        },
+                        onSearchQueryChange = { searchQuery = it }
                     )
                 }
-                item { SectionTitle(title = "Popular Recipes", action = "See All", onAction = { }) }
+
                 item {
-                    PopularRow(recipes = filteredRecipes, onOpenRecipeDetail = onOpenRecipeDetail)
+                    FilterRow(filters = filters, selectedIndex = selectedFilter, onSelect = { selectedFilter = it })
+                }
+
+                if (filteredRecipes.isEmpty()) {
+                    if (searchQuery.isNotBlank()) {
+                        item { AICallToActionButton(searchQuery, onOpenRecipeDetail) }
+                    } else {
+                        item { Text("No recipes found.", modifier = Modifier.padding(16.dp), color = TextMuted) }
+                    }
+                } else {
+                    // 🔥 Today's Special: Artık Firebase'deki en popüler (ilk) eleman!
+                    val special = filteredRecipes.first() // Değişken adı: 'special'
+
+                    item {
+                        TodaySpecialBanner(
+                            title = special.title,
+                            meta = "${special.minutes} min • Popular",
+                            imageUrl = special.imageUrl, // 🔥 ViewModel'den gelen URL
+                            onViewRecipe = { onOpenRecipeDetail(special.id) } // 🔥 Hata veren yer burasıydı, 'special.id' olarak düzelttik
+                        )
+                    }
+
+                    item { SectionTitle(title = "Popular Recipes", action = "See All", onAction = { }) }
+
+                    item {
+                        PopularRow(recipes = filteredRecipes, onOpenRecipeDetail = onOpenRecipeDetail)
+                    }
+                }
+
+                // --- Statik Bölümler (Şimdilik Alt Kısımda Kalabilir) ---
+                item { Text(text = "Categories", style = MaterialTheme.typography.titleLarge.noFontPad(), fontWeight = FontWeight.Bold, color = TextDark) }
+                item {
+                    // Statik Kategoriler (Bunlar projenin sabitleri gibi kalabilir)
+                    val categories = listOf(
+                        CategoryTile("Quick & Easy", "< 20 min", R.drawable.recipe_pancake, Color(0xFFFFD7B8)),
+                        CategoryTile("Healthy", "Light meals", R.drawable.recipe_omelet, Color(0xFFCFE8D6)),
+                        CategoryTile("Italian", "Pasta & more", R.drawable.recipe_pasta, Color(0xFFFFD1D1)),
+                        CategoryTile("Asian", "Noodles, rice", R.drawable.recipe_asian, Color(0xFFD9D0FF))
+                    )
+                    CategoriesGrid(categories = categories)
                 }
             }
-
-            item { Text(text = "Categories", style = MaterialTheme.typography.titleLarge.noFontPad(), fontWeight = FontWeight.Bold, color = TextDark) }
-            item { CategoriesGrid(categories = categories) }
-            item { Text(text = "Recommended for You", style = MaterialTheme.typography.titleLarge.noFontPad(), fontWeight = FontWeight.Bold, color = TextDark) }
-            item { RecommendedCard(item = recommended, onTry = { onOpenRecipeDetail("pancake") }) }
         }
     }
 }
@@ -375,6 +392,7 @@ private fun FilterChip(
 private fun TodaySpecialBanner(
     title: String,
     meta: String,
+    imageUrl: String, // 🔥 Yeni eklenen parametre
     onViewRecipe: () -> Unit
 ) {
     val shape = RoundedCornerShape(24.dp)
@@ -386,11 +404,15 @@ private fun TodaySpecialBanner(
             .clip(shape)
             .shadow(12.dp, shape)
     ) {
-        Image(
-            painter = painterResource(R.drawable.recipe_pasta),
+
+        // 🔥 ARTIK STATİK RESİM DEĞİL, ASYNCIMAGE!
+        AsyncImage(
+            model = imageUrl,
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            placeholder = painterResource(R.drawable.recipe_pasta), // Yüklenene kadar bunu göster
+            error = painterResource(R.drawable.recipe_pasta)
         )
 
         Box(
