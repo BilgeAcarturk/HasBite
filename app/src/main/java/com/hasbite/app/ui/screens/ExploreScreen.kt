@@ -34,6 +34,11 @@ import androidx.compose.ui.unit.dp
 import com.hasbite.app.R
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.hasbite.app.ui.viewmodel.ExploreViewModel
+import coil.compose.AsyncImage // 🔥 COIL IMPORTU ŞART
+import kotlinx.coroutines.launch
 
 private val CreamBg = Color(0xFFF6EFE7)
 private val Orange = Color(0xFFE47A2E)
@@ -43,19 +48,7 @@ private val TextMuted = Color(0xFF8A8A8A)
 private fun TextStyle.noFontPad(): TextStyle =
     copy(platformStyle = PlatformTextStyle(includeFontPadding = false))
 
-data class ExploreFilter(
-    val key: String,
-    val title: String,
-    val emoji: String? = null
-)
-data class PopularItem(
-    val title: String,
-    val categoryKey: String,
-    val minutes: Int,
-    val rating: Double,
-    val reviews: String,
-    val imageRes: Int
-)
+data class ExploreFilter(val key: String, val title: String, val emoji: String? = null)
 data class CategoryTile(val title: String, val subtitle: String, val imageRes: Int, val tint: Color)
 data class RecommendedItem(val title: String, val meta: String, val rating: Double, val imageRes: Int)
 
@@ -64,59 +57,44 @@ fun ExploreScreen(
     modifier: Modifier = Modifier,
     onOpenRecipeDetail: (String) -> Unit = {}
 ) {
-    val listState = rememberLazyListState()
 
-    // --- 1. STATE TANIMLARI ---
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+
+
+    // --- 1. VIEWMODEL BAĞLANTISI ---
+
+
+    val exploreViewModel: ExploreViewModel = viewModel()
+    val recipesFromFirebase by exploreViewModel.recipes.collectAsState()
+    val isLoading by exploreViewModel.isLoading.collectAsState()
+
+    // --- 2. STATE TANIMLARI ---
     var selectedFilter by remember { mutableStateOf(0) }
     var isSearchActive by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
-    // --- 2. VERİ LİSTELERİ ---
     val filters = listOf(
         ExploreFilter("all", "All", "🍽️"),
         ExploreFilter("breakfast", "Breakfast", "🍳"),
         ExploreFilter("lunch", "Lunch", "🥗"),
         ExploreFilter("dinner", "Dinner", "🍝"),
         ExploreFilter("dessert", "Dessert", "🍰"),
-        ExploreFilter("salad", "Salads", "🥬")
-    )
-
-    val popular = listOf(
-        PopularItem("Grilled Chicken", "dinner", 30, 4.9, "1.2k", R.drawable.recipe_chicken),
-        PopularItem("Avocado Toast", "breakfast", 10, 4.8, "980", R.drawable.recipe_avokado_toast),
-        PopularItem("Chocolate Cake", "dessert", 16, 4.9, "2.1k", R.drawable.recipe_chocolate_cake),
-        PopularItem("Quinoa Chicken Salad", "lunch", 20, 4.6, "640", R.drawable.recipe_quinoa_salad)
-    )
-
-    val categories = listOf(
-        CategoryTile("Quick & Easy", "< 20 min", R.drawable.recipe_pancake, Color(0xFFFFD7B8)),
-        CategoryTile("Healthy", "Light meals", R.drawable.recipe_omelet, Color(0xFFCFE8D6)),
-        CategoryTile("Italian", "Pasta & more", R.drawable.recipe_pasta, Color(0xFFFFD1D1)),
-        CategoryTile("Asian", "Noodles, rice", R.drawable.recipe_asian, Color(0xFFD9D0FF))
+        ExploreFilter("healthy", "Healthy", "🥬")
     )
 
     val selectedFilterKey = filters[selectedFilter].key
 
-    // --- 3. FİLTRELEME MANTIĞI (Tek Bir Yerde) ---
-    val filteredPopular = popular.filter { item ->
-        val matchesFilter = selectedFilterKey == "all" || item.categoryKey == selectedFilterKey
-        val matchesSearch = item.title.contains(searchQuery, ignoreCase = true)
+    // --- 3. FİLTRELEME MANTIĞI ---
+    val filteredRecipes = recipesFromFirebase.filter { item ->
+        val matchesFilter = selectedFilterKey == "all" || item.category.lowercase() == selectedFilterKey.lowercase()
+        // Hem title'ı hem aramayı küçük harfe çevirerek karşılaştır
+        val matchesSearch = item.title.lowercase().contains(searchQuery.lowercase())
         matchesFilter && matchesSearch
     }
 
-    val recommended = RecommendedItem(
-        title = "Protein Pancakes",
-        meta = "Healthy • 15 min",
-        rating = 4.7,
-        imageRes = R.drawable.recipe_pancake
-    )
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(CreamBg)
-    ) {
-        // Soft background image (blur hissi için düşük alpha)
+    Box(modifier = modifier.fillMaxSize().background(CreamBg)) {
+        // Arka Plan Resmi
         Image(
             painter = painterResource(R.drawable.login_food_bg),
             contentDescription = null,
@@ -125,111 +103,212 @@ fun ExploreScreen(
             alpha = 0.16f
         )
 
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            // Bottom bar üstüne binmesin + rahat scroll
-            contentPadding = PaddingValues(top = 14.dp, bottom = 120.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            item {
-                ExploreHeader(
-                    title = "Explore",
-                    subtitle = "Discover delicious recipes",
-                    searchQuery = searchQuery,
-                    isSearchActive = isSearchActive,
-                    onSearchToggle = {
-                        isSearchActive = !isSearchActive
-                        if (!isSearchActive) searchQuery = "" // Arama kapanınca filtreyi sıfırla
-                    },
-                    onSearchQueryChange = { searchQuery = it }
-                )
-            }
+        if (isLoading) {
+            // 🔥 Veri yüklenirken merkezi bir Loading gösteriyoruz
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.Center),
+                color = Orange
+            )
+        } else {
+            // 🔥 Tek bir LazyColumn: Her şey burada dönecek
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(top = 14.dp, bottom = 120.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                state = listState
+            ) {
 
-            // Arama sonucu boşsa kullanıcıya bilgi verelim
-            if (filteredPopular.isEmpty()) {
                 item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 40.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "No results found for '$searchQuery'",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = TextMuted
+                    SectionTitle(
+                        title = "Popular Recipes",
+                        action = "See All",
+                        onAction = {
+                            // 🔥 See All'a basınca en alttaki "All Recipes" kısmına kaydırır
+                            scope.launch {
+                                listState.animateScrollToItem(index = 10) // Yaklaşık olarak All Recipes'in indeksi
+                            }
+                        }
+                    )
+                }
+                //Header
+                item {
+                    ExploreHeader(
+                        title = "Explore",
+                        subtitle = "Discover delicious recipes",
+                        searchQuery = searchQuery,
+                        isSearchActive = isSearchActive,
+                        onSearchToggle = {
+                            isSearchActive = !isSearchActive
+                            if (!isSearchActive) searchQuery = ""
+                        },
+                        onSearchQueryChange = { searchQuery = it }
+                    )
+                }
+
+                item {
+                    FilterRow(filters = filters, selectedIndex = selectedFilter, onSelect = { selectedFilter = it })
+                }
+
+                // 2. Dinamik İçerik (Arama sonucu varsa Banner ve Popülerleri göster)
+                if (filteredRecipes.isNotEmpty()) {
+                    val special = filteredRecipes.first()
+                    item {
+                        TodaySpecialBanner(
+                            title = special.title,
+                            meta = "${special.minutes} min • Popular",
+                            imageUrl = special.imageUrl,
+                            onViewRecipe = { onOpenRecipeDetail(special.id) }
                         )
-                        Spacer(Modifier.height(16.dp))
+                    }
 
-                        // AI ile Üretme Butonu
-                        Button(
-                            onClick = {
-                                if (searchQuery.isNotBlank()) {
-                                    // Boşlukları güvenli hale getiriyoruz
-                                    val encodedQuery = java.net.URLEncoder.encode(searchQuery, "UTF-8")
+                    item { SectionTitle(title = "Popular Recipes", action = "See All", onAction = { }) }
 
-                                    // 🔥 KRİTİK DÜZELTME: Doğrudan rotayı veriyoruz!
-                                    // Başına hiçbir şey eklemeden sadece rotayı gönderin.
-                                    onOpenRecipeDetail("ai_generate/$encodedQuery")
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Orange),
-                            shape = RoundedCornerShape(20.dp)
+                    item {
+                        PopularRow(recipes = filteredRecipes, onOpenRecipeDetail = onOpenRecipeDetail)
+                    }
+                } else if (searchQuery.isNotBlank()) {
+                    // Arama yapıldı ama sonuç yoksa AI butonunu göster
+                    item { AICallToActionButton(searchQuery, onOpenRecipeDetail) }
+                }
+
+                    // --- KATEGORİLER ---
+                    //3. kategoriler
+                    item { Text(text = "Categories", style = MaterialTheme.typography.titleLarge.noFontPad(), fontWeight = FontWeight.Bold, color = TextDark) }
+                    item {
+                        val categories = listOf(
+                            CategoryTile("Quick & Easy", "< 20 min", R.drawable.recipe_pancake, Color(0xFFFFD7B8)),
+                            CategoryTile("Healthy", "Light meals", R.drawable.recipe_omelet, Color(0xFFCFE8D6)),
+                            CategoryTile("Italian", "Pasta & more", R.drawable.recipe_pasta, Color(0xFFFFD1D1)),
+                            CategoryTile("Asian", "Noodles, rice", R.drawable.recipe_asian, Color(0xFFD9D0FF))
+                        )
+                        CategoriesGrid(categories = categories)
+                    }
+
+                // 4. All Recipes (Her zaman görünür - Dinamik)
+                if (recipesFromFirebase.isNotEmpty()) {
+                    item {
+                        SectionTitle(
+                            title = "All Recipes",
+                            action = "(${recipesFromFirebase.size})",
+                            onAction = { }
+                        )
+                    }
+
+                    item {
+                        // Arama yapılıyorsa filtrelenmişleri, yapılmıyorsa hepsini göster
+                        val displayList = if (searchQuery.isBlank()) recipesFromFirebase else filteredRecipes
+
+                        val gridHeight = if (displayList.size <= 2) 280.dp else ((displayList.size + 1) / 2 * 260).dp
+
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            modifier = Modifier.height(gridHeight),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            userScrollEnabled = false
                         ) {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null) // Parıltı ikonu
-                            Spacer(Modifier.width(8.dp))
-                            Text("Generate with AI")
+                            items(displayList) { recipe ->
+                                PopularCard(
+                                    item = recipe,
+                                    onClick = { onOpenRecipeDetail(recipe.id) }
+                                )
+                            }
                         }
                     }
                 }
-            } else {
-                item {
-                    TodaySpecialBanner(
-                        title = "Creamy Sun-Dried\nTomato Pasta",
-                        meta = "25 min • Medium",
-                        onViewRecipe = { onOpenRecipeDetail("pasta") }
-                    )
-                }
 
-                item {
-                    SectionTitle(title = "Popular Recipes", action = "See All", onAction = { /* later */ })
-                }
 
-                item {
-                    PopularRow(
-                        popular = filteredPopular,
-                        onOpenRecipeDetail = onOpenRecipeDetail
-                    )
-                }
-            }
-
-            // Kategoriler ve diğerleri her zaman görünebilir
-            item {
-                Text(text = "Categories", style = MaterialTheme.typography.titleLarge.noFontPad(), fontWeight = FontWeight.Bold, color = TextDark)
-            }
-            item { CategoriesGrid(categories = categories) }
-
-            item {
-                Text(
-                    text = "Recommended for You",
-                    style = MaterialTheme.typography.titleLarge.noFontPad(),
-                    fontWeight = FontWeight.Bold,
-                    color = TextDark
-                )
-            }
-
-            item {
-                RecommendedCard(
-                    item = recommended,
-                    onTry = { onOpenRecipeDetail("pancake") }
-                )
             }
         }
     }
 }
+
+// 🔥 AI BUTONU (Hata Almamak İçin Ekledik)
+@Composable
+private fun AICallToActionButton(query: String, onOpenRecipeDetail: (String) -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = "No results found for '$query'", color = TextMuted)
+        Spacer(Modifier.height(16.dp))
+        Button(
+            onClick = {
+                val encoded = java.net.URLEncoder.encode(query, "UTF-8")
+                onOpenRecipeDetail("ai_generate/$encoded")
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = Orange)
+        ) {
+            Icon(Icons.Default.AutoAwesome, null)
+            Spacer(Modifier.width(8.dp))
+            Text("Generate with AI")
+        }
+    }
+}
+
+@Composable
+private fun PopularRow(
+    recipes: List<com.hasbite.app.data.model.Recipe>,
+    onOpenRecipeDetail: (String) -> Unit
+) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        items(recipes) { item ->
+            PopularCard(item = item, onClick = { onOpenRecipeDetail(item.id) })
+        }
+    }
+}
+
+@Composable
+private fun PopularCard(
+    item: com.hasbite.app.data.model.Recipe,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(18.dp)
+    Box(modifier = Modifier.width(180.dp).clip(shape).shadow(10.dp, shape).background(Color.White.copy(alpha = 0.82f)).clickable(onClick = onClick)) {
+        Column {
+            Box(modifier = Modifier.height(110.dp)) {
+                AsyncImage(
+                    model = item.imageUrl,
+                    contentDescription = item.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    placeholder = painterResource(R.drawable.recipe_chicken),
+                    error = painterResource(R.drawable.recipe_chicken)
+                )
+                Box(modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha = 0.35f)).padding(horizontal = 10.dp, vertical = 6.dp)) {
+                    Text("${item.minutes} min", color = Color.White, style = MaterialTheme.typography.labelMedium.noFontPad())
+                }
+            }
+
+            Column(modifier = Modifier.padding(12.dp)) {
+                // 🔥 BURAYI GÜNCELLEDİK:
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.titleMedium.noFontPad(),
+                    fontWeight = FontWeight.Bold,
+                    color = TextDark,
+                    maxLines = 2, // 👈 1'den 2'ye çıkardık, böylece alt satıra iner
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 18.sp // Satır aralığını biraz daraltabiliriz
+                )
+                Text("★ ${item.rating}", style = MaterialTheme.typography.bodyMedium.noFontPad(), color = TextMuted)
+            }
+        }
+    }
+}
+
+// ... Buradan aşağısı (ExploreHeader, FilterRow, FilterChip, TodaySpecialBanner, SectionTitle, CategoriesGrid, CategoryCard, RecommendedCard) aynı kalacak ...
+
+// ... Buradan aşağısı (ExploreHeader, FilterRow, FilterChip, TodaySpecialBanner, SectionTitle, CategoriesGrid, CategoryCard, RecommendedCard) aynı kalacak ...
+
+// ... ExploreHeader, FilterRow, FilterChip, TodaySpecialBanner, SectionTitle, CategoriesGrid, CategoryCard, RecommendedCard kodlarını buraya yapıştır (Aynı kalacaklar) ...
+
+
+
+
+
+
+
 
 @Composable
 private fun ExploreHeader(
@@ -379,6 +458,7 @@ private fun FilterChip(
 private fun TodaySpecialBanner(
     title: String,
     meta: String,
+    imageUrl: String, // 🔥 Yeni eklenen parametre
     onViewRecipe: () -> Unit
 ) {
     val shape = RoundedCornerShape(24.dp)
@@ -390,11 +470,15 @@ private fun TodaySpecialBanner(
             .clip(shape)
             .shadow(12.dp, shape)
     ) {
-        Image(
-            painter = painterResource(R.drawable.recipe_pasta),
+
+        // 🔥 ARTIK STATİK RESİM DEĞİL, ASYNCIMAGE!
+        AsyncImage(
+            model = imageUrl,
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            placeholder = painterResource(R.drawable.recipe_pasta), // Yüklenene kadar bunu göster
+            error = painterResource(R.drawable.recipe_pasta)
         )
 
         Box(
@@ -481,90 +565,8 @@ private fun SectionTitle(title: String, action: String, onAction: () -> Unit) {
     }
 }
 
-@Composable
-private fun PopularRow(
-    popular: List<PopularItem>,
-    onOpenRecipeDetail: (String) -> Unit
-) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(bottom = 4.dp)
-    ) {
-        items(popular) { item ->
-            PopularCard(
-                item = item,
-                onClick = {
-                    val recipeId = when (item.title) {
-                        "Grilled Chicken" -> "chicken"
-                        "Avocado Toast" -> "avocado"
-                        "Chocolate Cake" -> "cake"
-                        "Quinoa Chicken Salad" -> "quinoa_salad"
-                        else -> "default"
-                    }
-                    onOpenRecipeDetail(recipeId)
-                }
-            )
-        }
-    }
-}
 
-@Composable
-private fun PopularCard(
-    item: PopularItem,
-    onClick: () -> Unit
-) {
-    val shape = RoundedCornerShape(18.dp)
 
-    Box(
-        modifier = Modifier
-            .width(180.dp)
-            .clip(shape)
-            .shadow(10.dp, shape)
-            .background(Color.White.copy(alpha = 0.82f))
-            .clickable(onClick = onClick)
-    ) {
-        Column {
-            Box(modifier = Modifier.height(110.dp)) {
-                Image(
-                    painter = painterResource(item.imageRes),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(10.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.Black.copy(alpha = 0.35f))
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        "${item.minutes} min",
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelMedium.noFontPad()
-                    )
-                }
-            }
-
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    item.title,
-                    style = MaterialTheme.typography.titleMedium.noFontPad(),
-                    fontWeight = FontWeight.Bold,
-                    color = TextDark
-                )
-
-                Text(
-                    "★ ${item.rating}  (${item.reviews})",
-                    style = MaterialTheme.typography.bodyMedium.noFontPad(),
-                    color = TextMuted
-                )
-            }
-        }
-    }
-}
 
 @Composable
 private fun CategoriesGrid(categories: List<CategoryTile>) {

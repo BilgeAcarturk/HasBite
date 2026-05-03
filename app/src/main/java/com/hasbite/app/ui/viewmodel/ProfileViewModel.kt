@@ -42,14 +42,13 @@ class ProfileViewModel : ViewModel() {
             }
     }
 
-    fun updateUser(name: String, age: Int, bio: String, email: String) {
+    fun updateUser(name: String, age: Int, bio: String) {
         val uid = auth.currentUser?.uid ?: return
 
         val updates = mapOf(
             "name" to name,
             "age" to age,
-            "bio" to bio,
-            "email" to email
+            "bio" to bio
         )
 
         db.collection("users")

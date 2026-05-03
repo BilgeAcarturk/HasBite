@@ -15,7 +15,9 @@ import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.RestaurantMenu
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.hasbite.app.ui.viewmodel.SavedRecipesViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,11 +52,21 @@ fun MyCollectionsScreen(
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {}
 ) {
+
+    val viewModel: SavedRecipesViewModel = viewModel()
+    val recipes by viewModel.recipes.collectAsState()
+
+    // 🔥 Firestore’dan gelen veriye göre sayım
+    val healthyCount = recipes.count { it.category == "Healthy" }
+    val dessertCount = recipes.count { it.category == "Dessert" }
+    val dinnerCount = recipes.count { it.category == "Dinner" }
+    val breakfastCount = recipes.count { it.category == "Breakfast" }
+
     val collections = listOf(
-        CollectionItem("Healthy Meals", "12 recipes", R.drawable.recipe_omelet, "healthy"),
-        CollectionItem("Dessert Picks", "8 recipes", R.drawable.recipe_chocolate_cake, "dessert"),
-        CollectionItem("Quick Dinners", "10 recipes", R.drawable.recipe_chicken, "dinner"),
-        CollectionItem("Breakfast Ideas", "6 recipes", R.drawable.recipe_pancake, "breakfast")
+        CollectionItem("Healthy Meals", "$healthyCount recipes", R.drawable.recipe_omelet, "healthy"),
+        CollectionItem("Dessert Picks", "$dessertCount recipes", R.drawable.recipe_chocolate_cake, "dessert"),
+        CollectionItem("Quick Dinners", "$dinnerCount recipes", R.drawable.recipe_chicken, "dinner"),
+        CollectionItem("Breakfast Ideas", "$breakfastCount recipes", R.drawable.recipe_pancake, "breakfast")
     )
 
     Box(
@@ -180,9 +192,8 @@ private fun CollectionCard(item: CollectionItem) {
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.82f))
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -207,9 +218,9 @@ private fun CollectionCard(item: CollectionItem) {
                         contentAlignment = Alignment.Center
                     ) {
                         when (item.iconType) {
-                            "healthy" -> Icon(Icons.Outlined.RestaurantMenu, contentDescription = null, tint = Orange)
-                            "dessert" -> Icon(Icons.Outlined.FavoriteBorder, contentDescription = null, tint = Orange)
-                            else -> Icon(Icons.Outlined.BookmarkBorder, contentDescription = null, tint = Orange)
+                            "healthy" -> Icon(Icons.Outlined.RestaurantMenu, null, tint = Orange)
+                            "dessert" -> Icon(Icons.Outlined.FavoriteBorder, null, tint = Orange)
+                            else -> Icon(Icons.Outlined.BookmarkBorder, null, tint = Orange)
                         }
                     }
                 }

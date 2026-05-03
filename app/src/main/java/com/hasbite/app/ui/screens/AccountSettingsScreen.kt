@@ -12,7 +12,6 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,8 +39,6 @@ private fun TextStyle.noFontPad(): TextStyle =
 fun AccountSettingsScreen(
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {},
-    onOpenPersonalInformation: () -> Unit = {},
-    onOpenEmailAddress: () -> Unit = {},
     onOpenChangePassword: () -> Unit = {}
 ) {
     var emailNotifications by remember { mutableStateOf(true) }
@@ -52,6 +49,7 @@ fun AccountSettingsScreen(
             .fillMaxSize()
             .background(CreamBg)
     ) {
+
         Image(
             painter = painterResource(R.drawable.login_food_bg),
             contentDescription = null,
@@ -64,9 +62,13 @@ fun AccountSettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 14.dp, bottom = 36.dp),
+            contentPadding = PaddingValues(
+                top = 30.dp,
+                bottom = 120.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
+
             item {
                 SettingsHeader(
                     title = "Account Settings",
@@ -88,26 +90,11 @@ fun AccountSettingsScreen(
                             .fillMaxWidth()
                             .padding(vertical = 10.dp)
                     ) {
-                        SettingOptionRow(
-                            icon = { Icon(Icons.Outlined.PersonOutline, contentDescription = null, tint = TextDark) },
-                            title = "Personal Information",
-                            subtitle = "Update your name and profile data",
-                            onClick = onOpenPersonalInformation
-                        )
-
-                        Divider(color = Color(0xFFE8DED3))
 
                         SettingOptionRow(
-                            icon = { Icon(Icons.Outlined.Email, contentDescription = null, tint = TextDark) },
-                            title = "Email Address",
-                            subtitle = "jane.doe@email.com",
-                            onClick = onOpenEmailAddress
-                        )
-
-                        Divider(color = Color(0xFFE8DED3))
-
-                        SettingOptionRow(
-                            icon = { Icon(Icons.Outlined.Lock, contentDescription = null, tint = TextDark) },
+                            icon = {
+                                Icon(Icons.Outlined.Lock, contentDescription = null, tint = TextDark)
+                            },
                             title = "Change Password",
                             subtitle = "Update your password securely",
                             onClick = onOpenChangePassword
@@ -116,7 +103,9 @@ fun AccountSettingsScreen(
                         Divider(color = Color(0xFFE8DED3))
 
                         SettingToggleRow(
-                            icon = { Icon(Icons.Outlined.Visibility, contentDescription = null, tint = TextDark) },
+                            icon = {
+                                Icon(Icons.Outlined.Visibility, contentDescription = null, tint = TextDark)
+                            },
                             title = "Private Account",
                             checked = privateAccount,
                             onCheckedChange = { privateAccount = it }
@@ -125,7 +114,9 @@ fun AccountSettingsScreen(
                         Divider(color = Color(0xFFE8DED3))
 
                         SettingToggleRow(
-                            icon = { Icon(Icons.Outlined.Email, contentDescription = null, tint = TextDark) },
+                            icon = {
+                                Icon(Icons.Outlined.Email, contentDescription = null, tint = TextDark)
+                            },
                             title = "Email Notifications",
                             checked = emailNotifications,
                             onCheckedChange = { emailNotifications = it }
@@ -133,19 +124,20 @@ fun AccountSettingsScreen(
                     }
                 }
             }
+        }
 
-            item {
-                Button(
-                    onClick = { },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
-                    shape = RoundedCornerShape(22.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Orange)
-                ) {
-                    Text("Save Settings", fontWeight = FontWeight.Bold)
-                }
-            }
+        Button(
+            onClick = { },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 30.dp)
+                .height(54.dp)
+                .shadow(10.dp, RoundedCornerShape(22.dp)),
+            shape = RoundedCornerShape(22.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Orange)
+        ) {
+            Text("Save Settings", fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -157,9 +149,12 @@ private fun SettingsHeader(
     onBackClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp), // ✅ kritik fix
+        verticalAlignment = Alignment.CenterVertically // ✅ kritik fix
     ) {
+
         Surface(
             modifier = Modifier.size(44.dp),
             shape = CircleShape,

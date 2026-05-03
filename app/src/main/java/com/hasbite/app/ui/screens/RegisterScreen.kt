@@ -210,9 +210,14 @@ fun RegisterScreen(
                 Spacer(Modifier.height(8.dp))
 
                 registerState?.let {
+                    val message = when (it) {
+                        "VERIFY_EMAIL" -> "Verification email sent. Please check your inbox."
+                        else -> it
+                    }
+
                     Text(
-                        text = it,
-                        color = if (it == "REGISTER_SUCCESS") Color.Green else Color.Red
+                        text = message,
+                        color = if (it == "VERIFY_EMAIL") Color(0xFF2E7D32) else Color.Red
                     )
                 }
 
