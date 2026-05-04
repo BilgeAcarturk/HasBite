@@ -4,7 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.DismissDirection
@@ -189,21 +189,28 @@ fun ShoppingListScreen(
                 }
             }
 
-            itemsIndexed(items) { index, item ->
-                val dismissState = rememberDismissState()
-
-                if (dismissState.isDismissed(DismissDirection.EndToStart)) {
-                    LaunchedEffect(item.id) {
-                        viewModel.deleteItem(item)
+            // ESKİ itemsIndexed YERİNE BU GELDİ:
+            items(
+                items = items,
+                key = { it.id } // 1. DEĞİŞİKLİK: Her öğeye benzersiz ID atandı
+            ) { item ->
+                // 2. DEĞİŞİKLİK: Silme mantığı direkt state içine alındı
+                val dismissState = rememberDismissState(
+                    confirmStateChange = { dismissValue ->
+                        if (dismissValue == DismissValue.DismissedToStart) {
+                            viewModel.deleteItem(item)
+                            true
+                        } else {
+                            false
+                        }
                     }
-                }
+                )
 
                 SwipeToDismiss(
                     state = dismissState,
                     directions = setOf(DismissDirection.EndToStart),
-                    modifier = Modifier.padding(vertical = 4.dp), // Baloncuklar arası boşluk
+                    modifier = Modifier.padding(vertical = 4.dp),
                     background = {
-                        // Kaydırırken arkada çıkan kırmızı silme alanı (isteğe bağlı)
                         Box(
                             Modifier
                                 .fillMaxSize()
@@ -212,52 +219,50 @@ fun ShoppingListScreen(
                             contentAlignment = Alignment.CenterEnd
                         ) {
                             Icon(
-                                androidx.compose.material.icons.Icons.Default.Delete,
+                                Icons.Default.Delete,
                                 contentDescription = null,
                                 tint = Color.White,
                                 modifier = Modifier.padding(end = 16.dp)
                             )
                         }
-                    }
-                ) {
-                    // Baloncuk Görünümlü Kart
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .shadow(4.dp, RoundedCornerShape(20.dp)),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color.White.copy(alpha = 0.9f) // Açık renkli baloncuk
-                        )
-                    ) {
-                        Row(
+                    },
+                    dismissContent = { // 3. DEĞİŞİKLİK: İçerik dismissContent içine alındı
+                        Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .shadow(4.dp, RoundedCornerShape(20.dp)),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color.White.copy(alpha = 0.9f)
+                            )
                         ) {
-                            Checkbox(
-                                checked = item.checked,
-                                onCheckedChange = {
-                                    viewModel.toggleItem(item)
-                                },
-                                colors = CheckboxDefaults.colors(
-                                    checkedColor = Orange,
-                                    uncheckedColor = TextMuted
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = item.checked,
+                                    onCheckedChange = { viewModel.toggleItem(item) },
+                                    colors = CheckboxDefaults.colors(
+                                        checkedColor = Orange,
+                                        uncheckedColor = TextMuted
+                                    )
                                 )
-                            )
 
-                            Spacer(Modifier.width(8.dp))
+                                Spacer(Modifier.width(8.dp))
 
-                            Text(
-                                text = item.name,
-                                style = MaterialTheme.typography.bodyLarge.noFontPad(),
-                                color = if (item.checked) TextMuted else TextDark,
-                                modifier = Modifier.weight(1f)
-                            )
+                                Text(
+                                    text = item.name,
+                                    style = MaterialTheme.typography.bodyLarge.noFontPad(),
+                                    color = if (item.checked) TextMuted else TextDark,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
-                }
+                )
             }
 
             // CLEAR BUTTON
