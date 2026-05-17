@@ -53,7 +53,7 @@ The application follows an MVVM-based architecture using Jetpack Compose, StateF
 
 The navigation structure is built using Jetpack Compose Navigation. Screens communicate through lightweight route parameters such as recipeId and categoryName.
 
-<img width="900" alt="Navigation Flow Diagram" src="https://github.com/user-attachments/assets/7d385b9f-2d18-4046-aba1-61b229ac3d8a" />
+<img width="900" alt="Navigation Flow Diagram" src="https://github.com/user-attachments/assets/f30e93c7-952f-413e-8387-b29bcdb79d78" />
 
 ---
 
