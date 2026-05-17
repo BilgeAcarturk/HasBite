@@ -62,7 +62,7 @@ class AuthViewModel : ViewModel() {
                 val userData = hashMapOf(
                     "name" to name,
                     "email" to email,
-                    "age" to 20
+                    "age" to 0
                 )
 
                 db.collection("users")
@@ -88,7 +88,7 @@ class AuthViewModel : ViewModel() {
     // 🔥 FORGOT PASSWORD
     fun sendReset(email: String) {
         if (email.isBlank()) {
-            _message.value = "Email boş olamaz"
+            _message.value = "Email can not be empty"
             return
         }
 
@@ -96,11 +96,11 @@ class AuthViewModel : ViewModel() {
 
         auth.sendPasswordResetEmail(email)
             .addOnSuccessListener {
-                _message.value = "Reset maili gönderildi"
+                _message.value = "Reset email has been sent"
                 _loading.value = false
             }
             .addOnFailureListener {
-                _message.value = it.message ?: "Hata oluştu"
+                _message.value = it.message ?: "Error occurred"
                 _loading.value = false
             }
     }

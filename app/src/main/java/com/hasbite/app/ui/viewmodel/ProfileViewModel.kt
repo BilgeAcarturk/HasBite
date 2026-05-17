@@ -59,4 +59,57 @@ class ProfileViewModel : ViewModel() {
     fun refreshUser() {
         loadUser()
     }
+
+    fun updateAvatar(avatarName: String) {
+
+        val uid = auth.currentUser?.uid ?: return
+
+        db.collection("users")
+            .document(uid)
+            .update("avatar", avatarName)
+
+        refreshUser()
+    }
+
+    private val _searchResults = MutableStateFlow<List<User>>(emptyList())
+    val searchResults: StateFlow<List<User>> = _searchResults
+
+    fun searchUsers(query: String) {
+
+        if (query.isBlank()) {
+            _searchResults.value = emptyList()
+            return
+        }
+
+        db.collection("users")
+            .whereGreaterThanOrEqualTo("name", query)
+            .whereLessThanOrEqualTo("name", query + "\uf8ff")
+            .get()
+            .addOnSuccessListener { snapshot ->
+
+                val users = snapshot.documents.mapNotNull { doc ->
+
+                    val user = doc.toObject(User::class.java)
+
+                    user?.copy(uid = doc.id)
+
+                }.filter {
+
+                    !it.privateAccount
+                }
+
+                _searchResults.value = users
+            }
+    }
+
+    fun updatePrivateAccount(isPrivate: Boolean) {
+
+        val uid = auth.currentUser?.uid ?: return
+
+        db.collection("users")
+            .document(uid)
+            .update("privateAccount", isPrivate)
+
+        refreshUser()
+    }
 }

@@ -3,12 +3,14 @@ package com.hasbite.app.ui.screens
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.DismissDirection
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.DismissValue
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.rememberDismissState
 import androidx.compose.material.SwipeToDismiss
 import androidx.compose.material.icons.Icons
@@ -62,6 +64,21 @@ fun ShoppingListScreen(
 
     var newItem by remember { mutableStateOf("") }
 
+    var selectedList by remember { mutableStateOf("Weekly") }
+
+    val shoppingLists = listOf(
+        "Weekly",
+        "Breakfast",
+        "Dinner",
+        "Healthy",
+        "Dessert",
+        "Snacks"
+    )
+
+    LaunchedEffect(selectedList) {
+        viewModel.observeItems(selectedList)
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -78,6 +95,7 @@ fun ShoppingListScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(top = 14.dp, bottom = 36.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
@@ -132,7 +150,7 @@ fun ShoppingListScreen(
                             IconButton(
                                 onClick = {
                                     if (newItem.isNotBlank()) {
-                                        viewModel.addItem(newItem)
+                                        viewModel.addItem(newItem, selectedList)
                                         newItem = ""
                                     }
                                 }
@@ -144,6 +162,32 @@ fun ShoppingListScreen(
                                 )
                             }
                         }
+                    }
+                }
+            }
+
+            // LIST SELECTOR
+            item {
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+
+                    items(shoppingLists) { list ->
+
+                        FilterChip(
+                            selected = selectedList == list,
+                            onClick = {
+                                selectedList = list
+                            },
+                            label = {
+                                Text(list)
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Orange,
+                                selectedLabelColor = Color.White
+                            )
+                        )
                     }
                 }
             }
@@ -189,28 +233,24 @@ fun ShoppingListScreen(
                 }
             }
 
-            // ESKİ itemsIndexed YERİNE BU GELDİ:
             items(
                 items = items,
-                key = { it.id } // 1. DEĞİŞİKLİK: Her öğeye benzersiz ID atandı
+                key = { item -> item.id }
             ) { item ->
-                // 2. DEĞİŞİKLİK: Silme mantığı direkt state içine alındı
-                val dismissState = rememberDismissState(
-                    confirmStateChange = { dismissValue ->
-                        if (dismissValue == DismissValue.DismissedToStart) {
-                            viewModel.deleteItem(item)
-                            true
-                        } else {
-                            false
-                        }
+                val dismissState = rememberDismissState()
+
+                if (dismissState.isDismissed(DismissDirection.EndToStart)) {
+                    LaunchedEffect(item.id) {
+                        viewModel.deleteItem(item)
                     }
-                )
+                }
 
                 SwipeToDismiss(
                     state = dismissState,
                     directions = setOf(DismissDirection.EndToStart),
-                    modifier = Modifier.padding(vertical = 4.dp),
+                    modifier = Modifier.padding(vertical = 4.dp), // Baloncuklar arası boşluk
                     background = {
+                        // Kaydırırken arkada çıkan kırmızı silme alanı (isteğe bağlı)
                         Box(
                             Modifier
                                 .fillMaxSize()
@@ -219,50 +259,52 @@ fun ShoppingListScreen(
                             contentAlignment = Alignment.CenterEnd
                         ) {
                             Icon(
-                                Icons.Default.Delete,
+                                androidx.compose.material.icons.Icons.Default.Delete,
                                 contentDescription = null,
                                 tint = Color.White,
                                 modifier = Modifier.padding(end = 16.dp)
                             )
                         }
-                    },
-                    dismissContent = { // 3. DEĞİŞİKLİK: İçerik dismissContent içine alındı
-                        Card(
+                    }
+                ) {
+                    // Baloncuk Görünümlü Kart
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(4.dp, RoundedCornerShape(20.dp)),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color.White.copy(alpha = 0.9f) // Açık renkli baloncuk
+                        )
+                    ) {
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .shadow(4.dp, RoundedCornerShape(20.dp)),
-                            shape = RoundedCornerShape(20.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = Color.White.copy(alpha = 0.9f)
-                            )
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Checkbox(
-                                    checked = item.checked,
-                                    onCheckedChange = { viewModel.toggleItem(item) },
-                                    colors = CheckboxDefaults.colors(
-                                        checkedColor = Orange,
-                                        uncheckedColor = TextMuted
-                                    )
+                            Checkbox(
+                                checked = item.checked,
+                                onCheckedChange = {
+                                    viewModel.toggleItem(item)
+                                },
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = Orange,
+                                    uncheckedColor = TextMuted
                                 )
+                            )
 
-                                Spacer(Modifier.width(8.dp))
+                            Spacer(Modifier.width(8.dp))
 
-                                Text(
-                                    text = item.name,
-                                    style = MaterialTheme.typography.bodyLarge.noFontPad(),
-                                    color = if (item.checked) TextMuted else TextDark,
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
+                            Text(
+                                text = item.name,
+                                style = MaterialTheme.typography.bodyLarge.noFontPad(),
+                                color = if (item.checked) TextMuted else TextDark,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
-                )
+                }
             }
 
             // CLEAR BUTTON

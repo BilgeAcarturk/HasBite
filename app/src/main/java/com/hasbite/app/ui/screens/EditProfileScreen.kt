@@ -11,11 +11,13 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.collectAsState
 import com.hasbite.app.ui.viewmodel.ProfileViewModel
@@ -51,6 +53,8 @@ fun EditProfileScreen(
     var bio by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") } // Sadece göstermek için tutmaya devam ediyoruz
 
+    var showAvatarDialog by remember { mutableStateOf(false) }
+
     LaunchedEffect(user) {
         user?.let {
             name = it.name
@@ -77,6 +81,7 @@ fun EditProfileScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(top = 14.dp, bottom = 36.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
@@ -110,7 +115,9 @@ fun EditProfileScreen(
                                     .padding(4.dp)
                             ) {
                                 Image(
-                                    painter = painterResource(R.drawable.profile_picture),
+                                    painter = painterResource(
+                                        getAvatarRes(user?.avatar ?: "avatar1")
+                                    ),
                                     contentDescription = null,
                                     modifier = Modifier
                                         .fillMaxSize()
@@ -130,7 +137,11 @@ fun EditProfileScreen(
                                 color = Orange,
                                 shadowElevation = 6.dp
                             ) {
-                                IconButton(onClick = { }) {
+                                IconButton(
+                                    onClick = {
+                                        showAvatarDialog = true
+                                    }
+                                ) {
                                     Icon(
                                         imageVector = Icons.Default.CameraAlt,
                                         contentDescription = "Change photo",
@@ -196,6 +207,56 @@ fun EditProfileScreen(
                 }
             }
         }
+        if (showAvatarDialog) {
+
+            AlertDialog(
+                onDismissRequest = {
+                    showAvatarDialog = false
+                },
+                confirmButton = {},
+                title = {
+                    Text("Choose Avatar")
+                },
+                text = {
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+
+                        listOf(
+                            "avatar1",
+                            "avatar2",
+                            "avatar3"
+                        ).forEach { avatar ->
+
+                            Image(
+                                painter = painterResource(getAvatarRes(avatar)),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .clip(CircleShape)
+                                    .clickable {
+
+                                        viewModel.updateAvatar(avatar)
+
+                                        showAvatarDialog = false
+                                    },
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+                }
+            )
+        }
+    }
+}
+
+private fun getAvatarRes(name: String): Int {
+    return when (name) {
+        "avatar1" -> R.drawable.w1
+        "avatar2" -> R.drawable.m1
+        "avatar3" -> R.drawable.w2
+        else -> R.drawable.w1
     }
 }
 

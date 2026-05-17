@@ -50,6 +50,9 @@ fun ProfileScreen(
     val viewModel: ProfileViewModel = viewModel()
     val user by viewModel.user.collectAsState()
     var notificationsEnabled by remember { mutableStateOf(true) }
+    var searchText by remember { mutableStateOf("") }
+
+    val searchResults by viewModel.searchResults.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.refreshUser()
@@ -75,7 +78,15 @@ fun ProfileScreen(
             contentPadding = PaddingValues(top = 14.dp, bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            item { ProfileHeader() }
+            item {
+                ProfileHeader(
+                    searchText = searchText,
+                    onSearchChange = {
+                        searchText = it
+                        viewModel.searchUsers(it)
+                    }
+                )
+            }
 
             item {
                 ProfileCard(
@@ -84,7 +95,77 @@ fun ProfileScreen(
                 )
             }
 
-            item { ProfileStats() }
+            if (searchText.isNotBlank()) {
+
+                item {
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+
+                        searchResults.forEach { foundUser ->
+
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .offset(y = (-1).dp),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color(0xFFF9F3ED)
+                                )
+                            ) {
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+
+                                    Box(
+                                        modifier = Modifier
+                                            .size(54.dp)
+                                            .clip(CircleShape)
+                                            .background(Orange.copy(alpha = 0.15f))
+                                            .padding(3.dp)
+                                    ) {
+
+                                        Image(
+                                            painter = painterResource(
+                                                getAvatarRes(foundUser.avatar)
+                                            ),
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clip(CircleShape),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.width(14.dp))
+
+                                    Column(
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+
+                                        Text(
+                                            text = foundUser.name,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextDark
+                                        )
+
+                                        Text(
+                                            text = foundUser.email,
+                                            color = TextMuted,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             item {
                 SettingsCard(
@@ -106,11 +187,17 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun ProfileHeader() {
+private fun ProfileHeader(
+    searchText: String,
+    onSearchChange: (String) -> Unit
+) {
+
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+
         Text(
             text = "Profile",
             style = MaterialTheme.typography.displaySmall.noFontPad(),
@@ -118,9 +205,56 @@ private fun ProfileHeader() {
             color = TextDark,
             modifier = Modifier.weight(1f)
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            CircleIconButton(Icons.Outlined.NotificationsNone) {}
-            CircleIconButton(Icons.Filled.Search) {}
+
+        Surface(
+            modifier = Modifier
+                .weight(1.5f)
+                .height(48.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = Color.White.copy(alpha = 0.82f),
+            shadowElevation = 8.dp
+        ) {
+
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    tint = TextMuted
+                )
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                TextField(
+                    value = searchText,
+                    onValueChange = onSearchChange,
+                    placeholder = {
+                        Text(
+                            text = "Search Profile",
+                            color = TextMuted,
+                            style = MaterialTheme.typography.bodyMedium.noFontPad()
+                        )
+                    },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyMedium.noFontPad(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        cursorColor = Orange
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = (-1).dp)
+                )
+            }
         }
     }
 }
@@ -141,7 +275,9 @@ private fun ProfileCard(user: User?, onEditProfile: () -> Unit) {
                 modifier = Modifier.size(120.dp).clip(CircleShape).background(Orange.copy(alpha = 0.18f)).padding(4.dp)
             ) {
                 Image(
-                    painter = painterResource(R.drawable.profile_picture),
+                    painter = painterResource(
+                        getAvatarRes(user?.avatar ?: "avatar1")
+                    ),
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize().clip(CircleShape).graphicsLayer {
                         scaleX = 1.35f
@@ -165,25 +301,7 @@ private fun ProfileCard(user: User?, onEditProfile: () -> Unit) {
             }
         }
     }
-}
 
-@Composable
-private fun ProfileStats() {
-    val shape = RoundedCornerShape(20.dp)
-    Card(
-        modifier = Modifier.fillMaxWidth().shadow(10.dp, shape),
-        shape = shape,
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF9F3ED))
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 18.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            StatItem("62", "Saved")
-            StatItem("18", "Reviews")
-            StatItem("137", "Photos")
-        }
-    }
 }
 
 @Composable
@@ -267,6 +385,15 @@ private fun LogoutButton(onClick: () -> Unit) {
             fontWeight = FontWeight.Bold,
             color = Color.White
         )
+    }
+}
+
+private fun getAvatarRes(name: String): Int {
+    return when (name) {
+        "avatar1" -> R.drawable.w1
+        "avatar2" -> R.drawable.m1
+        "avatar3" -> R.drawable.w2
+        else -> R.drawable.w1
     }
 }
 

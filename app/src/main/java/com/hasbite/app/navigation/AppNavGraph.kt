@@ -32,8 +32,10 @@ fun AppNavGraph(
         composable(Routes.Login.route) {
             LoginScreen(
                 onLoginClick = { _, _ ->
-                    navController.navigate(Routes.AI.route) {
-                        popUpTo(Routes.Login.route) { inclusive = true }
+                    navController.navigate(Routes.Explore.route) {
+                        popUpTo(Routes.Login.route) {
+                            inclusive = true
+                        }
                     }
                 },
                 onSignUpClick = { navController.navigate(Routes.Register.route) },
@@ -69,10 +71,19 @@ fun AppNavGraph(
             MainScaffold(navController) { m ->
                 ExploreScreen(
                     modifier = m,
-                    onOpenRecipeDetail = { route ->
-                        if (route.startsWith("ai_generate")) navController.navigate(route)
-                        else navController.navigate("recipe_detail/$route")
+                onOpenRecipeDetail = { route, isSaved ->
+
+                    if (route.startsWith("ai_generate")) {
+
+                        navController.navigate(route)
+
+                    } else {
+
+                        navController.navigate(
+                            "recipe_detail/$route/$isSaved"
+                        )
                     }
+                }
                 )
             }
         }
@@ -81,7 +92,7 @@ fun AppNavGraph(
             MainScaffold(navController) { m ->
                 FavoritesScreen(
                     modifier = m,
-                    onOpenRecipeDetail = { id -> navController.navigate("recipe_detail/$id") }
+                    onOpenRecipeDetail = { id -> navController.navigate("recipe_detail/$id/true") }
                 )
             }
         }
@@ -116,9 +127,12 @@ fun AppNavGraph(
             CollectionDetailScreen(
                 category = category,
                 onBackClick = { navController.popBackStack() },
-                onOpenRecipe = { recipeId ->
-                    navController.navigate(Routes.RecipeDetail.createRoute(recipeId))
-                }
+            onOpenRecipe = { recipeId, isSaved ->
+
+                navController.navigate(
+                    "recipe_detail/$recipeId/$isSaved"
+                )
+            }
             )
         }
 
@@ -135,11 +149,27 @@ fun AppNavGraph(
             )
         }
 
-        composable("recipe_detail/{recipeId}") { backStackEntry ->
-            val recipeId = backStackEntry.arguments?.getString("recipeId") ?: "default"
+        composable(
+            route = "recipe_detail/{recipeId}/{isSavedRecipe}"
+        ) { backStackEntry ->
+
+            val recipeId =
+                backStackEntry.arguments
+                    ?.getString("recipeId")
+                    ?: "default"
+
+            val isSavedRecipe =
+                backStackEntry.arguments
+                    ?.getString("isSavedRecipe")
+                    ?.toBoolean()
+                    ?: false
+
             RecipeDetailScreen(
                 recipeId = recipeId,
-                onBackClick = { navController.popBackStack() }
+                isSavedRecipe = isSavedRecipe,
+                onBackClick = {
+                    navController.popBackStack()
+                }
             )
         }
 

@@ -29,7 +29,47 @@ object GeminiService {
                     put(JSONObject().apply {
                         put("parts", JSONArray().apply {
                             put(JSONObject().apply {
-                                put("text", "Give me a clear recipe with ingredients and steps for: $prompt")
+                                put(
+                                    "text",
+                                    """
+                                        You are a professional recipe assistant.
+                                    
+                                        ONLY answer food-related requests.
+                                    
+                                        If the request is unrelated to food, cooking, meals, drinks, ingredients, or recipes,
+                                        respond ONLY with:
+                                    
+                                        INVALID_REQUEST
+                                    
+                                        For valid recipes:
+                                    
+                                        STRICT RULES:
+                                        - Include ingredient quantities
+                                        - Include cooking times when necessary
+                                        - Keep steps clear and practical
+                                        - No storytelling
+                                        - No introductions
+                                        - No markdown symbols
+                                        - Do not use ** or *
+                                        - Keep the recipe readable and medium-length
+                                    
+                                        REQUIRED FORMAT:
+                                    
+                                        Recipe Name: [recipe title]
+                                    
+                                        Ingredients:
+                                        - 2 bell peppers
+                                        - 1 cup rice
+                                    
+                                        Steps:
+                                        1. Preheat oven to 180C.
+                                        2. Mix ingredients in a bowl.
+                                        3. Cook for 25 minutes.
+                                    
+                                        User request: $prompt
+                                        """.trimIndent()
+                                )
+
                             })
                         })
                     })

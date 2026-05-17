@@ -47,45 +47,99 @@ data class ParsedRecipe(
     val ingredients: List<String>,
     val steps: List<String>
 )
-
 fun parseRecipe(text: String): ParsedRecipe {
-    val lines = text.lines().map { it.trim() }.filter { it.isNotBlank() }
+
+    val cleanedText = text
+        .replace("**", "")
+        .replace("*", "")
+        .replace("#", "")
+
+    val lines = cleanedText
+        .lines()
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
 
     var title = "AI Recipe"
+
     val ingredients = mutableListOf<String>()
     val steps = mutableListOf<String>()
+
     var mode = ""
 
     for (line in lines) {
-        if (title == "AI Recipe") {
-            val lowerLine = line.lowercase()
-            // Eğer satır "##" ile başlıyorsa veya "here's" içermeyen kısa bir isimse başlık yap
-            if (line.startsWith("##")) {
-                title = line.replace("#", "").trim()
-            } else if (line.length < 50 && !lowerLine.contains("here's")) {
-                title = line
-            }
+
+        val lower = line.lowercase()
+
+        // TITLE
+
+        if (
+            title == "AI Recipe" &&
+            (
+                    lower.startsWith("recipe name:") ||
+                            lower.startsWith("title:")
+                    )
+        ) {
+
+            title = line
+                .substringAfter(":")
+                .trim()
+
+            continue
         }
 
-        // 2. MOD BELİRLEME
-        if (line.lowercase().contains("ingredients")) {
+        // INGREDIENT MODE
+
+        if (lower.contains("ingredients")) {
             mode = "ING"
             continue
         }
-        if (line.lowercase().contains("instructions") || line.lowercase().contains("steps")) {
+
+        // STEP MODE
+
+        if (
+            lower.contains("steps") ||
+            lower.contains("instructions")
+        ) {
+
             mode = "STEP"
             continue
         }
 
-        // 3. VERİLERİ TOPLAMA
-        if (mode == "ING" && (line.startsWith("*") || line.startsWith("-") || line.startsWith("•"))) {
-            ingredients.add(line.removePrefix("*").removePrefix("-").removePrefix("•").trim())
+        // INGREDIENTS
+
+        if (mode == "ING") {
+
+            val ingredient = line
+                .removePrefix("-")
+                .removePrefix("•")
+                .trim()
+
+            if (
+                ingredient.isNotBlank() &&
+                !ingredient.lowercase().contains("steps")
+            ) {
+
+                ingredients.add(ingredient)
+            }
         }
 
-        if (mode == "STEP" && (line.firstOrNull()?.isDigit() == true)) {
-            steps.add(line)
+        // STEPS
+
+        if (mode == "STEP") {
+
+            val cleanedStep = line
+                .replace(Regex("^\\d+\\."), "")
+                .trim()
+
+            if (cleanedStep.isNotBlank()) {
+                steps.add(cleanedStep)
+            }
         }
     }
 
-    return ParsedRecipe(title, ingredients, steps)
+    return ParsedRecipe(
+        title = title,
+        ingredients = ingredients,
+        steps = steps
+    )
 }

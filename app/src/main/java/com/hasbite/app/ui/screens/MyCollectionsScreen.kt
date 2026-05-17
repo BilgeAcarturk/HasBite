@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hasbite.app.ui.viewmodel.SavedRecipesViewModel
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -87,8 +88,9 @@ fun MyCollectionsScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 14.dp, bottom = 36.dp),
+            contentPadding = PaddingValues(top = 14.dp, bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             item {
@@ -198,7 +200,9 @@ private fun CollectionCard(item: CollectionItem, onClick: () -> Unit) {
             .shadow(8.dp, RoundedCornerShape(22.dp))
             .clickable { onClick() },
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.82f))
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFFFFCFA)
+        )
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 

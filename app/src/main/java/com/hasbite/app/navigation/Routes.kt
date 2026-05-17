@@ -28,8 +28,13 @@ sealed class Routes(val route: String) {
 
     data object AIRecipe : Routes("ai_recipe")
 
-    data object RecipeDetail : Routes("recipe_detail/{recipeId}") {
-        fun createRoute(recipeId: String) = "recipe_detail/$recipeId"
+    data object RecipeDetail :
+        Routes("recipe_detail/{recipeId}/{isSavedRecipe}") {
+
+        fun createRoute(
+            recipeId: String,
+            isSavedRecipe: Boolean
+        ) = "recipe_detail/$recipeId/$isSavedRecipe"
     }
 
     data object CollectionDetail : Routes("collection_detail/{category}") {

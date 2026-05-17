@@ -45,6 +45,16 @@ fun RegisterScreen(
     val viewModel: AuthViewModel = viewModel()
     val registerState by viewModel.loginState.collectAsState()
 
+    LaunchedEffect(registerState) {
+
+        if (registerState == "VERIFY_EMAIL") {
+
+            kotlinx.coroutines.delay(1500)
+
+            onBackToLoginClick()
+        }
+    }
+
     var showPassword by remember { mutableStateOf(false) }
     var showConfirmPassword by remember { mutableStateOf(false) }
 

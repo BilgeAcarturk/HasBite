@@ -19,25 +19,26 @@ class ShoppingViewModel : ViewModel() {
     private val userId: String?
         get() = auth.currentUser?.uid
 
-    init {
-        observeItems()
-    }
 
     // 🔥 REAL-TIME LISTENER
-    private fun observeItems() {
-        val currentUid = userId ?: return // Kullanıcı yoksa dinleme yapma
+    fun observeItems(listName: String) {
+
+        val currentUid = userId ?: return
 
         db.collection("users")
-            .document(currentUid) // Sabit ID yerine dinamik UID
+            .document(currentUid)
             .collection("shoppingList")
-            .orderBy("checked")
+            .whereEqualTo("listName", listName)
             .addSnapshotListener { snapshot, _ ->
+
                 val list = snapshot?.documents?.map {
+
                     ShoppingItem(
                         id = it.id,
                         name = it.getString("name") ?: "",
                         checked = it.getBoolean("checked") ?: false
                     )
+
                 } ?: emptyList()
 
                 items.clear()
@@ -46,7 +47,7 @@ class ShoppingViewModel : ViewModel() {
     }
 
     // ➕ ITEM EKLE
-    fun addItem(name: String) {
+    fun addItem(name: String, listName: String) {
         val currentUid = userId ?: return
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
@@ -61,6 +62,7 @@ class ShoppingViewModel : ViewModel() {
                     val item = hashMapOf(
                         "name" to trimmed,
                         "checked" to false,
+                        "listName" to listName,
                         "createdAt" to FieldValue.serverTimestamp()
                     )
 

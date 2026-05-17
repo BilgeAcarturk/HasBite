@@ -9,5 +9,6 @@ data class Recipe(
     val imageUrl: String = "", // İnternet adresi
     val ingredients: List<String> = emptyList(),
     val steps: List<String> = emptyList(),
-    val content: String = "" // AI'dan gelen ham metni tutmak için
+    val content: String = "", // AI'dan gelen ham metni tutmak için
+    val saveCount: Int = 0
 )

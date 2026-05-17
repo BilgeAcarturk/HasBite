@@ -4,6 +4,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
+import com.hasbite.app.ui.viewmodel.ProfileViewModel
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,8 +44,20 @@ fun AccountSettingsScreen(
     onBackClick: () -> Unit = {},
     onOpenChangePassword: () -> Unit = {}
 ) {
-    var emailNotifications by remember { mutableStateOf(true) }
-    var privateAccount by remember { mutableStateOf(false) }
+    val viewModel: ProfileViewModel = viewModel()
+    val user by viewModel.user.collectAsState()
+
+    var emailNotifications by remember {
+        mutableStateOf(true)
+    }
+
+    var privateAccount by remember {
+        mutableStateOf(false)
+    }
+
+    LaunchedEffect(user) {
+        privateAccount = user?.privateAccount ?: false
+    }
 
     Box(
         modifier = modifier
@@ -127,7 +142,12 @@ fun AccountSettingsScreen(
         }
 
         Button(
-            onClick = { },
+            onClick = {
+
+                viewModel.updatePrivateAccount(privateAccount)
+
+                onBackClick()
+            },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()

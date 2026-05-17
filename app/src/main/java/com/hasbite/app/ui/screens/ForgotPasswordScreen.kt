@@ -138,7 +138,7 @@ fun ForgotPasswordScreen(
 
                     Text(
                         text = it,
-                        color = if (it.contains("gönderildi")) Color(0xFF2E7D32) else Color.Red
+                        color = if (it.contains("sent")) Color(0xFF2E7D32) else Color.Red
                     )
 
                     LaunchedEffect(it) {

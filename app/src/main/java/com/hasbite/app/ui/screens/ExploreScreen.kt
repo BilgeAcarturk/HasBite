@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,8 +36,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hasbite.app.ui.viewmodel.ExploreViewModel
-import coil.compose.AsyncImage // 🔥 COIL IMPORTU ŞART
-import kotlinx.coroutines.launch
+import coil.compose.AsyncImage
 
 private val CreamBg = Color(0xFFF6EFE7)
 private val Orange = Color(0xFFE47A2E)
@@ -55,11 +53,10 @@ data class RecommendedItem(val title: String, val meta: String, val rating: Doub
 @Composable
 fun ExploreScreen(
     modifier: Modifier = Modifier,
-    onOpenRecipeDetail: (String) -> Unit = {}
+    onOpenRecipeDetail: (String, Boolean) -> Unit = { _, _ -> }
 ) {
 
     val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
 
 
     // --- 1. VIEWMODEL BAĞLANTISI ---
@@ -77,7 +74,6 @@ fun ExploreScreen(
     val filters = listOf(
         ExploreFilter("all", "All", "🍽️"),
         ExploreFilter("breakfast", "Breakfast", "🍳"),
-        ExploreFilter("lunch", "Lunch", "🥗"),
         ExploreFilter("dinner", "Dinner", "🍝"),
         ExploreFilter("dessert", "Dessert", "🍰"),
         ExploreFilter("healthy", "Healthy", "🥬")
@@ -100,7 +96,7 @@ fun ExploreScreen(
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
-            alpha = 0.16f
+            alpha = 0.08f
         )
 
         if (isLoading) {
@@ -118,18 +114,6 @@ fun ExploreScreen(
                 state = listState
             ) {
 
-                item {
-                    SectionTitle(
-                        title = "Popular Recipes",
-                        action = "See All",
-                        onAction = {
-                            // 🔥 See All'a basınca en alttaki "All Recipes" kısmına kaydırır
-                            scope.launch {
-                                listState.animateScrollToItem(index = 10) // Yaklaşık olarak All Recipes'in indeksi
-                            }
-                        }
-                    )
-                }
                 //Header
                 item {
                     ExploreHeader(
@@ -157,14 +141,23 @@ fun ExploreScreen(
                             title = special.title,
                             meta = "${special.minutes} min • Popular",
                             imageUrl = special.imageUrl,
-                            onViewRecipe = { onOpenRecipeDetail(special.id) }
+                            onViewRecipe = { onOpenRecipeDetail(special.id, false) }
                         )
                     }
 
-                    item { SectionTitle(title = "Popular Recipes", action = "See All", onAction = { }) }
+                    item {
+
+                        Text(
+                            text = "Popular Recipes",
+                            style = MaterialTheme.typography.titleLarge.noFontPad(),
+                            fontWeight = FontWeight.Bold,
+                            color = TextDark
+                        )
+                    }
 
                     item {
-                        PopularRow(recipes = filteredRecipes, onOpenRecipeDetail = onOpenRecipeDetail)
+                        PopularRow(
+                            recipes = filteredRecipes.take(10), onOpenRecipeDetail = onOpenRecipeDetail)
                     }
                 } else if (searchQuery.isNotBlank()) {
                     // Arama yapıldı ama sonuç yoksa AI butonunu göster
@@ -184,39 +177,6 @@ fun ExploreScreen(
                         CategoriesGrid(categories = categories)
                     }
 
-                // 4. All Recipes (Her zaman görünür - Dinamik)
-                if (recipesFromFirebase.isNotEmpty()) {
-                    item {
-                        SectionTitle(
-                            title = "All Recipes",
-                            action = "(${recipesFromFirebase.size})",
-                            onAction = { }
-                        )
-                    }
-
-                    item {
-                        // Arama yapılıyorsa filtrelenmişleri, yapılmıyorsa hepsini göster
-                        val displayList = if (searchQuery.isBlank()) recipesFromFirebase else filteredRecipes
-
-                        val gridHeight = if (displayList.size <= 2) 280.dp else ((displayList.size + 1) / 2 * 260).dp
-
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(2),
-                            modifier = Modifier.height(gridHeight),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            userScrollEnabled = false
-                        ) {
-                            items(displayList) { recipe ->
-                                PopularCard(
-                                    item = recipe,
-                                    onClick = { onOpenRecipeDetail(recipe.id) }
-                                )
-                            }
-                        }
-                    }
-                }
-
 
             }
         }
@@ -225,7 +185,7 @@ fun ExploreScreen(
 
 // 🔥 AI BUTONU (Hata Almamak İçin Ekledik)
 @Composable
-private fun AICallToActionButton(query: String, onOpenRecipeDetail: (String) -> Unit) {
+private fun AICallToActionButton(query: String, onOpenRecipeDetail: (String, Boolean) -> Unit) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -235,7 +195,7 @@ private fun AICallToActionButton(query: String, onOpenRecipeDetail: (String) -> 
         Button(
             onClick = {
                 val encoded = java.net.URLEncoder.encode(query, "UTF-8")
-                onOpenRecipeDetail("ai_generate/$encoded")
+                onOpenRecipeDetail("ai_generate/$encoded", false)
             },
             colors = ButtonDefaults.buttonColors(containerColor = Orange)
         ) {
@@ -249,11 +209,11 @@ private fun AICallToActionButton(query: String, onOpenRecipeDetail: (String) -> 
 @Composable
 private fun PopularRow(
     recipes: List<com.hasbite.app.data.model.Recipe>,
-    onOpenRecipeDetail: (String) -> Unit
+    onOpenRecipeDetail: (String, Boolean) -> Unit
 ) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         items(recipes) { item ->
-            PopularCard(item = item, onClick = { onOpenRecipeDetail(item.id) })
+            PopularCard(item = item, onClick = { onOpenRecipeDetail(item.id, false) })
         }
     }
 }
@@ -264,9 +224,10 @@ private fun PopularCard(
     onClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(18.dp)
-    Box(modifier = Modifier.width(180.dp).clip(shape).shadow(10.dp, shape).background(Color.White.copy(alpha = 0.82f)).clickable(onClick = onClick)) {
+    Box(modifier = Modifier.width(182.dp)
+        .height(230.dp).clip(shape).shadow(10.dp, shape).background(Color(0xFFFFFCFA)).clickable(onClick = onClick)) {
         Column {
-            Box(modifier = Modifier.height(110.dp)) {
+            Box(modifier = Modifier.height(120.dp)) {
                 AsyncImage(
                     model = item.imageUrl,
                     contentDescription = item.title,
@@ -288,8 +249,9 @@ private fun PopularCard(
                     fontWeight = FontWeight.Bold,
                     color = TextDark,
                     maxLines = 2, // 👈 1'den 2'ye çıkardık, böylece alt satıra iner
+                    minLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    lineHeight = 18.sp // Satır aralığını biraz daraltabiliriz
+                    lineHeight = 20.sp // Satır aralığını biraz daraltabiliriz
                 )
                 Text("★ ${item.rating}", style = MaterialTheme.typography.bodyMedium.noFontPad(), color = TextMuted)
             }
@@ -354,8 +316,11 @@ private fun ExploreHeader(
 
             if (!isSearchActive) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    CircleIconButton(icon = Icons.Outlined.NotificationsNone, onClick = { /* Later */ })
-                    CircleIconButton(icon = Icons.Filled.Search, onClick = onSearchToggle)
+
+                    CircleIconButton(
+                        icon = Icons.Filled.Search,
+                        onClick = onSearchToggle
+                    )
                 }
             }
         }
@@ -594,7 +559,7 @@ private fun CategoryCard(tile: CategoryTile) {
             .height(86.dp)
             .clip(shape)
             .shadow(10.dp, shape)
-            .background(tile.tint.copy(alpha = 0.75f))
+            .background(tile.tint)
     ) {
         Image(
             painter = painterResource(tile.imageRes),
@@ -604,7 +569,7 @@ private fun CategoryCard(tile: CategoryTile) {
                 .fillMaxHeight()
                 .width(80.dp),
             contentScale = ContentScale.Crop,
-            alpha = 0.88f
+            alpha = 0.72f
         )
 
         Column(
@@ -625,7 +590,9 @@ private fun RecommendedCard(item: RecommendedItem, onTry: () -> Unit) {
     Card(
         modifier = Modifier.shadow(10.dp, shape),
         shape = shape,
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.82f))
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFFFFCFA)
+        )
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
