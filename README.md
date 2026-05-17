@@ -134,52 +134,65 @@ app/google-services.json
 - Reactive UI with StateFlow
 - Private account visibility infrastructure
 
-# The application uses Firebase services for:
+# Firebase Integration
 
-User authentication
-Firestore database operations
-Realtime profile search
-User profile storage
-Favorites and saved recipes
-AI Integration
+The application uses Firebase services for:
+
+- User authentication
+- Firestore database operations
+- Realtime profile search
+- User profile storage
+- Favorites and saved recipes
+
+---
+
+# AI Integration
 
 HasBite integrates Google Gemini API for AI recipe generation.
 
-# The AI system:
+The AI system:
 
-Generates recipes dynamically
-Parses recipe structure
-Separates ingredients and instructions
-Returns formatted recipe content
-Profile System
+- Generates recipes dynamically
+- Parses recipe structure
+- Separates ingredients and instructions
+- Returns formatted recipe content
 
-# The profile infrastructure includes:
+---
 
-Realtime user search
-Prefix-based Firestore queries
-Avatar personalization
-Private account visibility control
-Dynamic Compose profile rendering
+# Profile System
+
+The profile infrastructure includes:
+
+- Realtime user search
+- Prefix-based Firestore queries
+- Avatar personalization
+- Private account visibility control
+- Dynamic Compose profile rendering
+
+---
 
 # Challenges During Development
 
-AI response parsing instability
-Firestore realtime listener conflicts
-Navigation state synchronization
-Duplicate recipe prevention
-Compose recomposition issues
+- AI response parsing instability
+- Firestore realtime listener conflicts
+- Navigation state synchronization
+- Duplicate recipe prevention
+- Compose recomposition issues
 
-# These issues were solved through:
+---
 
-Prefix-based Firestore queries
-Shared ViewModel state management
-Firestore rule updates
-Unified avatar architecture
-Compose recomposition optimization
+# These Issues Were Solved Through
+
+- Prefix-based Firestore queries
+- Shared ViewModel state management
+- Firestore rule updates
+- Unified avatar architecture
+- Compose recomposition optimization
 
 # Team Members
-Bilge Acartürk
-Ece Günaydın
-İrem Gül
-Öykü Alabaş
-Ayşe İrem Hüdaverdi
+
+- Bilge Acartürk
+- Ece Günaydın
+- İrem Gül
+- Öykü Alabaş
+- Ayşe İrem Hüdaverdi
